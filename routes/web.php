@@ -27,7 +27,7 @@ Route::get('/', function () {
 
 Route::get('/users/create', function () {
     return Inertia::render('Users/Create');
-})->can('create', 'App\Models\User');
+});
 //->middleware('can:create.App\Models\User'); or ->can('create', 'App\Models\User');
 Route::post('/users', function () {
     // validate the request
@@ -105,5 +105,10 @@ Route::middleware('auth')->group(function () {
         return redirect('/users');
     });
 //    })->can('edit', 'App\Models\User');
+
+    Route::get('/admin', function(){
+        return Inertia::render('');
+    });
+
 
 });
