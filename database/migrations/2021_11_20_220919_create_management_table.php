@@ -17,7 +17,9 @@ class CreateManagementTable extends Migration
         Schema::connection('mongodb')->dropIfExists('management');
         Schema::connection('mongodb')->create('management', function ($collection) {
             $collection->id();
-            $collection->string('group');
+            $collection->string('workspace')->unique();
+            $collection->foreignId('user_id');
+            $collection->json('groups');
             $collection->timestamps();
         });
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Models\Management;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -107,7 +108,9 @@ Route::middleware('auth')->group(function () {
 //    })->can('edit', 'App\Models\User');
 
     Route::get('/admin', function(){
-        return Inertia::render('');
+        return Inertia::render('Auth/Management',[
+            'workspace' => Management::first(),
+        ]);
     });
 
 
