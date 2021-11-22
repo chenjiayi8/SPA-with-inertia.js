@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreManagementRequest;
 use App\Http\Requests\UpdateManagementRequest;
 use App\Models\Management;
+use Inertia\Inertia;
 
 class ManagementController extends Controller
 {
@@ -15,7 +16,9 @@ class ManagementController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('Auth/Management',[
+            'workspace' => Management::first(),
+        ]);
     }
 
     /**

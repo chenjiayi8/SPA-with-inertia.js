@@ -10,7 +10,7 @@ class Management extends Eloquent
     use HasFactory;
 
     protected $connection = 'mongodb';
-    protected $collection = 'management';
+    protected $collection = 'managements';
 
 
 }

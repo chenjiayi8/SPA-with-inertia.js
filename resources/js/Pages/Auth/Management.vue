@@ -24,7 +24,9 @@
                                     <div>
                                         <div class="text-sm font-medium text-gray-900"
                                         >
-                                            <p :style="groupColor(group.color)">{{ group.name }}</p>
+                                            <div :style="groupColor(group.color)">
+                                                <p>{{ group.name }}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -54,8 +56,8 @@ let props = defineProps({
     can: Object,
 });
 
-let groupColor = (color) => {
-    return `'background-color:'. ${color}`;
+let groupColor = ($color) => {
+    return {'background-color': $color,}
 }
 </script>
 

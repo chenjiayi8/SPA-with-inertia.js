@@ -157,7 +157,7 @@ class ManagementFactory extends Factory
 
     public function appendGroups($numGroups)
     {
-        $collection = \App\Models\Management::first();
+        $collection = Management::first();
         $groups = $collection->groups;
         for ($i = 0; $i <= $numGroups; $i++) {
             array_push($groups, $this->createGroup());

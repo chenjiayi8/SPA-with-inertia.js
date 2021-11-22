@@ -14,8 +14,8 @@ class CreateManagementTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mongodb')->dropIfExists('management');
-        Schema::connection('mongodb')->create('management', function ($collection) {
+        Schema::connection('mongodb')->dropIfExists('managements');
+        Schema::connection('mongodb')->create('managements', function ($collection) {
             $collection->id();
             $collection->string('workspace')->unique();
             $collection->foreignId('user_id');
@@ -31,6 +31,6 @@ class CreateManagementTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mongodb')->dropIfExists('management');
+        Schema::connection('mongodb')->dropIfExists('managements');
     }
 }

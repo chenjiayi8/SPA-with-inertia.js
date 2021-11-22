@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
-use App\Models\Management;
+use App\Http\Controllers\ManagementController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -107,11 +107,15 @@ Route::middleware('auth')->group(function () {
     });
 //    })->can('edit', 'App\Models\User');
 
-    Route::get('/admin', function(){
-        return Inertia::render('Auth/Management',[
-            'workspace' => Management::first(),
-        ]);
-    });
+//    Route::get('/admin', function(){
+//        return Inertia::render('Auth/Management',[
+//            'workspace' => Management::first(),
+//        ]);
+//    });
+
+
+    // admin
+    Route::resource('/management', ManagementController::class)->except('show');
 
 
 });
