@@ -22,15 +22,55 @@ class ManagementFactory extends Factory
         $date = new UTCDateTime;
         $date->toDateTime();
         $group = json_decode('');
-        $group['id'] = (string)new ObjectId;
+        $group['id'] = 0;
         $group['created_at'] = $date;
         $group['name'] = $this->faker->word();
         $group['color'] = $this->faker->hexColor();
         $group['statuses'] = $this->fakeStatuses(5);
         $group['priorities'] = $this->fakePriorities(5);
         $group['items'] = $this->fakeItems(2);
+        $group['items_format'] = [
+            ['name' => 'Name', 'type' => 'text', 'width' => 15],
+            ['name' => 'Person', 'type' => 'person', 'width' => 10],
+            ['name' => 'Time Tracking', 'type' => 'tracking', 'width' => 10],
+            ['name' => 'Note', 'type' => 'longtext', 'width' => 20],
+            ['name' => 'Subitems', 'type' => 'subitem', 'width' => 10],
+            ['name' => 'Status', 'type' => 'status', 'width' => 10],
+            ['name' => 'Priority', 'type' => 'priority', 'width' => 10],
+            ['name' => 'Due Date', 'type' => 'date', 'width' => 10],
+            ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 15],
+        ];
         $group['LastUpdated'] = $date;
         return $group;
+    }
+
+    public function fakeItem()
+    {
+        $user = User::first();
+        $date = new UTCDateTime;
+        $item = json_decode('');
+        $item['id'] = 0;
+        $item['created_at'] = $date;
+        $item['Name'] = $this->faker->word();
+        $item['Person'] = [$user->id];
+        $time_tracking = ['records' => $this->fakerTimeTrackingRecords(3), 'total' => 0.0];
+        $item['Time Tracking'] = $time_tracking;
+        $item['Time Tracking'] = $this->updateTimeHours($item['Time Tracking']);
+        $item['Note'] = $this->faker->paragraph();
+        $item['Subitems'] = $this->fakeSubitems(2);
+        $item['Status'] = rand(0, 4);
+        $item['Priority'] = rand(0, 4);
+        $item['Due Date'] = $this->faker->date();
+        $item['LastUpdated'] = $date;
+        $item['subitems_format'] = [
+            ['name' => 'Name', 'type' => 'text', 'width' => 15],
+            ['name' => 'Person', 'type' => 'person', 'width' => 10],
+            ['name' => 'URL', 'type' => 'url', 'width' => 20],
+            ['name' => 'Status', 'type' => 'status', 'width' => 10],
+            ['name' => 'Note', 'type' => 'longtext', 'width' => 20],
+            ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 15],
+        ];
+        return $item;
     }
 
     public function fakeItems($numItems)
@@ -44,25 +84,7 @@ class ManagementFactory extends Factory
         return $items;
     }
 
-    public function fakeItem()
-    {
-        $user = User::first();
-        $date = new UTCDateTime;
-        $item = json_decode('');
-        $item['id'] = 0;
-        $item['created_at'] = $date;
-        $item['Name'] = $this->faker->word();
-        $item['Person'] = [$user->id];
-        $item['Time Tracking'] = $this->fakerTimeTrackingRecords(3);
-        $item['Time hours'] = $this->setTimeHours($item['Time Tracking']);
-        $item['Subitems'] = $this->fakeSubitems(2);
-        $item['Status'] = rand(0, 4);
-        $item['Priority'] = rand(0, 4);
-        $item['Due Date'] = $this->faker->date();
-        $item['Note'] = $this->faker->paragraph();
-        $item['LastUpdated'] = $date;
-        return $item;
-    }
+
 
     public function fakeSubitems($numSubitems)
     {
@@ -85,8 +107,8 @@ class ManagementFactory extends Factory
         $subItem['Name'] = $this->faker->word();
         $subItem['Person'] = [$user->id];
         $subItem['URL'] = $this->faker->url();
-        $subItem['Status'] = rand(0, 4);
         $subItem['Note'] = $this->faker->paragraph();
+        $subItem['Status'] = rand(0, 4);
         $subItem['LastUpdated'] = $date;
         return $subItem;
     }
@@ -146,13 +168,15 @@ class ManagementFactory extends Factory
     }
 
 
-    public function setTimeHours($records)
+    public function updateTimeHours($time_tracking)
     {
+        $records = $time_tracking['records'];
         $hours = 0.0;
         foreach ($records as $record) {
             $hours += $record['Work hour'];
         }
-        return round($hours, 2);
+        $time_tracking['total'] = round($hours, 2);
+        return $time_tracking;
     }
 
     public function appendGroups($numGroups)
@@ -160,7 +184,9 @@ class ManagementFactory extends Factory
         $collection = Management::first();
         $groups = $collection->groups;
         for ($i = 0; $i <= $numGroups; $i++) {
-            array_push($groups, $this->createGroup());
+            $group = $this->createGroup();
+            $group['id'] = $i+1;
+            array_push($groups, $group);
         }
         $collection->groups = $groups;
         $collection->save();

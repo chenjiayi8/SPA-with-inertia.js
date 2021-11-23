@@ -28,6 +28,14 @@
                 </NavLink>
             </li>
             <li v-if="logged">
+                <NavLink
+                    href="/admin"
+                    :active="$page.component=== 'Management'"
+                >
+                    Administration
+                </NavLink>
+            </li>
+            <li v-if="logged">
                 <NavLink href="/logout" method="post">
                     Log Out
                 </NavLink>

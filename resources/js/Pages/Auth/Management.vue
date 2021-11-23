@@ -1,6 +1,6 @@
 <template>
     <Head title="Management"/>
-    <div class="flex justify-between  mb-6">
+    <div class="flex justify-between mb-6">
         <div class="flex items-center">
             <h1 className="text-3xl">
                 Management
@@ -8,36 +8,21 @@
         </div>
     </div>
 
-
     <div class="flex flex-col">
         <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-                <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <tbody class="bg-white divide-y divide-gray-200">
-                        <tr
-                            v-for="group in workspace.groups"
-                            :key="group.id"
-                        >
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div>
-                                        <div class="text-sm font-medium text-gray-900"
-                                        >
-                                            <div :style="groupColor(group.color)">
-                                                <p>{{ group.name }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                        </tr>
-                        </tbody>
-                    </table>
+            <div class="py-2 align-middle inline-block min-w-full">
+                <div class="overflow-hidden sm:rounded-lg">
+                    <Group v-for="group in workspace.groups"
+                           :key="group.id"
+                           v-bind:group="group"
+                    />
                 </div>
             </div>
         </div>
+        <!--        <div id="floating-scrollbar"-->
+        <!--             style="position: fixed; bottom: 0px; height: 30px; overflow: auto hidden; left: 0px; width: 480.333px; display: block;">-->
+        <!--            <div style="border: 1px solid rgb(255, 255, 255); opacity: 0.01; width: 736.333px;"></div>-->
+        <!--        </div>-->
     </div>
 
 </template>
@@ -50,15 +35,26 @@ import {Inertia} from "@inertiajs/inertia";
 import throttle from "lodash/throttle";
 // make the call when no typing for N milliseconds
 import debounce from "lodash/debounce";
+import Group from "../../Shared/Group";
 
 let props = defineProps({
     workspace: Object,
     can: Object,
 });
 
-let groupColor = ($color) => {
-    return {'background-color': $color,}
+let showContent = ($workspace) => {
+    console.log($workspace);
 }
+
+
+
+
+
+let getColumns = ($item) => {
+    const $keys = Object.keys($item)
+    return $keys.filter($key => $key[0].toUpperCase() === $key[0]);
+}
+
 </script>
 
 <style scoped>
