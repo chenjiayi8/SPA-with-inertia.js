@@ -29,7 +29,7 @@ class ManagementFactory extends Factory
         $group['statuses'] = $this->fakeStatuses(5);
         $group['priorities'] = $this->fakePriorities(5);
         $group['items'] = $this->fakeItems(2);
-        $group['items_format'] = [
+        $group['formats'] = [
             ['name' => 'Name', 'type' => 'text', 'width' => 15],
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
             ['name' => 'Time Tracking', 'type' => 'tracking', 'width' => 10],
@@ -60,9 +60,9 @@ class ManagementFactory extends Factory
         $item['Subitems'] = $this->fakeSubitems(2);
         $item['Status'] = rand(0, 4);
         $item['Priority'] = rand(0, 4);
-        $item['Due Date'] = $this->faker->date();
+        $item['Due Date'] = new UTCDateTime(strtotime($this->faker->date()));
         $item['LastUpdated'] = $date;
-        $item['subitems_format'] = [
+        $item['formats'] = [
             ['name' => 'Name', 'type' => 'text', 'width' => 15],
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
             ['name' => 'URL', 'type' => 'url', 'width' => 20],

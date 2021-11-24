@@ -7,11 +7,11 @@
                            :class="group.id ?'mt-20':''">
                         <thead class="bg-gray-50">
                         <tr class="flex items-center">
-                            <th v-for="format in group.items_format" scope="col" :style="formatTitle(format, group)">
+                            <th v-for="format in group.formats" scope="col" :style="formatTitle(format)">
                                 <div
-                                    class="px-6 py-3 text-left tracking-wider"
+                                    class="px-6 py-3 text-center tracking-wider"
                                 >
-                                    {{ setTitle(format, group) }}
+                                    {{ setTitle(format) }}
                                 </div>
                             </th>
 
@@ -20,9 +20,8 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                         <Item v-for="item in group.items"
                               v-bind:item="item"
-                              v-bind:formats="group.items_format"
-                              v-bind:statuses="group.statuses"
-                              v-bind:priorities="group.priorities"/>
+                              v-bind:group="group"
+                        />
                         </tbody>
                     </table>
                 </div>
@@ -51,11 +50,10 @@ export default {
     },
 
     methods: {
-        formatTitle($format, $group) {
+        formatTitle($format) {
             if ($format.name === 'Name') {
-                console.log($group.color);
                 return {
-                    'color': $group.color,
+                    'color': this.group.color,
                     'width': toPercent($format['width']),
                     'font-size': 'large',
                 }
@@ -67,9 +65,9 @@ export default {
                 }
             }
         },
-        setTitle($format, $group) {
+        setTitle($format) {
             if ($format.name === 'Name') {
-                return ucwords($group.name);
+                return ucwords(this.group.name);
             } else {
                 return $format.name;
             }

@@ -40,6 +40,9 @@ import Group from "../../Shared/Group";
 let props = defineProps({
     workspace: Object,
     can: Object,
+    show: false,
+    clientX: 0,
+    clientY: 0,
 });
 
 let showContent = ($workspace) => {
@@ -53,6 +56,13 @@ let showContent = ($workspace) => {
 let getColumns = ($item) => {
     const $keys = Object.keys($item)
     return $keys.filter($key => $key[0].toUpperCase() === $key[0]);
+}
+
+let onHover = ($e) => {
+    const { clientX, clientY } = $e;
+    this.show = true;
+    this.clientX = clientX;
+    this.clientY = clientY;
 }
 
 </script>
