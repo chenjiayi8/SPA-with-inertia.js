@@ -3,7 +3,7 @@
         <div class="popup-inner">
             <slot />
             <button class="popup-close" @click="TogglePopup()">
-                Close Popup
+                Cancel
             </button>
         </div>
     </div>

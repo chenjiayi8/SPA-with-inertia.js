@@ -1,33 +1,80 @@
 <template>
     <tr class="flex items-center mt-4">
         <td v-for="format in group.formats" :style="formatCell(format)">
-            <div :class="format.name == 'Name' ?'flex justify-between space-x-4':''">
-                <button v-if="format.name == 'Name'"
-                     class="flex-shrink-0"
-                     style="height: 50px; width: 20px;"
-                     :style="{'background-color': group.color}"
+            <div :class="setPrefixClass(format)" :style="setPrefixStyle(format)">
+                <button v-if="format.name === 'Name'"
+                        class="flex-shrink-0"
+                        style="height: 50px; width: 20px;"
+                        :style="{'background-color': group.color}"
                 ></button>
+                <div v-if="format.name === 'subitems'" class="flex space-x-2">
+                    <i class="fas fa-1x fa-chevron-right"
+                       :class=" subItemOpen ? 'transform rotate-90 ':''"></i>
+                    <i class="fas fa-list"></i>
+                </div>
+
                 <div>
                     <component
                         :is="setCellType(format)"
                         :href="setCellValue(format)"
                         v-html="setCellValue(format)"
                         :ref="setTextAreaRef(format)"
-                        @focus="styleTextArea(setTextAreaRef(format), 'in')"
-                        @blur="styleTextArea(setTextAreaRef(format), 'out')"
+                        @click="itemAction(format,['click', 'buttonTrigger'])"
+                        @focus="itemAction(format, ['focus','in'])"
+                        @blur="itemAction(format, ['focus','out'])"
                         :style="formatContent(format)"
                         class="px-1"
                     />
+
+                    <Popup
+                        v-if="popupTriggers.buttonTrigger"
+                        :TogglePopup="() => TogglePopup('buttonTrigger')">
+                        <h2>{{ popupContent.name }}</h2>
+                        <div>
+                            <div v-for="choice in popupContent.choices">
+                                <button :style="choice.format"
+                                        @click="chooseMenu(choice, 'buttonTrigger')">
+                                    {{ choice.name }}
+                                </button>
+                            </div>
+
+                        </div>
+                    </Popup>
                 </div>
             </div>
-            <!--            </div>-->
         </td>
     </tr>
 
+    <div v-if='subItemOpen' class="mt-5 ml-5 mb-10 ">
+        <table class="divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+            <tr class="flex items-center">
+                <th v-for="format in item.formats" scope="col" :style="formatTitle(format)">
+                    <div
+                        class="px-6 py-3 text-center tracking-wider"
+                    >
+                        {{ format.name === 'Name' ? 'Subitems' : format.name }}
+                    </div>
+                </th>
+
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+            <Subitem v-for="subitem in item.subitems"
+                     v-bind:subitem="subitem"
+                     v-bind:item="item"
+                     v-bind:group="group"
+            />
+            </tbody>
+        </table>
+    </div>
 </template>
 
 <script>
 import Subitem from "./Subitem";
+import {ref} from 'vue';
+import Popup from './Popup.vue'
+
 
 function toPercent($number, $float = 0) {
     return parseFloat($number).toFixed($float) + "%";
@@ -38,7 +85,7 @@ function randomText() {
 }
 
 function zeroPad(num, places) {
-    var zero = places - num.toString().length + 1;
+    let zero = places - num.toString().length + 1;
     return Array(+(zero > 0 && zero)).join("0") + num;
 }
 
@@ -52,13 +99,54 @@ function parseStringDateTime($s) {
     return $d.toLocaleDateString('en-GB') + '\n ' + zeroPad($d.getHours(), 2) + ":" + zeroPad($d.getMinutes(), 2) + ":" + zeroPad($d.getSeconds(), 2);
 }
 
+
 export default {
-    components: {Subitem},
+    setup() {
+        const popupTriggers = ref({
+            buttonTrigger: false,
+            timedTrigger: false
+        });
+
+        const popupContent = ref({
+            name: '',
+            choices: [],
+            format: '',
+        });
+
+        const subItemOpen = ref(false);
+
+        const subItemContent = ref({
+            groupColor: '',
+            data:[],
+            formats:[],
+        });
+
+        const TogglePopup = (trigger) => {
+            popupTriggers.value[trigger] = !popupTriggers.value[trigger]
+        };
+        return {
+            Popup,
+            popupTriggers,
+            TogglePopup,
+            popupContent,
+            subItemOpen,
+            subItemContent,
+        }
+    },
+
+    components: {Subitem, Popup},
+
     props: {
         item: Object,
         group: Object,
     },
+
     methods: {
+        chooseMenu(item, trigger) {
+            console.log(item);
+            this.TogglePopup(trigger);
+        },
+
         setWidth($format) {
             return {
                 'width': toPercent($format['width']),
@@ -66,6 +154,33 @@ export default {
                 'text-align': 'left',
             }
         },
+
+        setPrefixStyle(format) {
+            switch (format.name) {
+                case 'Name': {
+                    return {
+                        'align-items': 'center'
+                    }
+                }
+                case 'subitems': {
+                    return {
+                        'align-items': 'center'
+                    }
+                }
+            }
+        },
+
+        setPrefixClass(format) {
+            switch (format.name) {
+                case 'Name': {
+                    return 'flex justify-between space-x-4'
+                }
+                case 'subitems': {
+                    return 'flex space-x-2'
+                }
+            }
+        },
+
         formatCell($format) {
             switch ($format.type) {
                 case 'datetime':
@@ -125,10 +240,13 @@ export default {
 
 
         },
+
         formatContent($format) {
             switch ($format.type) {
                 case 'longtext':
                     return {
+                        'margin-left': '10px',
+                        'margin-right': '10px',
                         'zIndex': '0',
                     }
                 case 'subitem':
@@ -144,6 +262,7 @@ export default {
 
 
         },
+
         setCellType($format) {
             switch ($format['type']) {
                 case 'text':
@@ -153,11 +272,11 @@ export default {
                 case 'url':
                     return 'url';
                 case 'status':
-                    return 'span';
+                    return 'button';
                 case 'priority':
-                    return 'span';
+                    return 'button';
                 case 'subitem':
-                    return 'span';
+                    return 'button';
                 case 'longtext':
                     return 'textarea';
                 case 'tracking':
@@ -168,6 +287,7 @@ export default {
                     return 'span';
             }
         },
+
         setCellValue($format) {
             switch ($format['type']) {
                 case 'text':
@@ -209,7 +329,83 @@ export default {
             }
         },
 
-        styleTextArea($ref, $option) {
+        setPopupContent(format, trigger) {
+            console.log('setPopupContent', format, trigger);
+            const default_format = 'height: 20px; width: 100px; color: white;'
+            switch (format.name) {
+                case 'Status': {
+                    this.popupContent.name = 'Status';
+                    let choices = this.group['statuses'];
+                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    this.popupContent.choices = choices;
+                    break;
+                }
+                case 'Priority':
+                    this.popupContent.name = 'Priority'
+                    let choices = this.group['priorities'];
+                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    this.popupContent.choices = choices;
+                    break;
+                default: {
+                    console.log('setPopupContent: unmatched choice')
+                }
+            }
+            this.TogglePopup(trigger);
+        },
+
+        itemAction(format, option) {
+            let key = format.name + '.' + option[0];
+            console.log(key)
+            switch (key) {
+                case 'Name.focus':
+                case 'Note.focus' : {
+                    this.zoomTextArea(format, option[1]);
+                    break;
+                }
+
+                case 'Priority.click':
+                case 'Status.click': {
+                    this.setPopupContent(format, option[1])
+                    break;
+                }
+
+                case 'subitems.click': {
+                    this.openSubitems(format, option[1]);
+                    break;
+                }
+
+                default : {
+                }
+
+            }
+        },
+
+        openSubitems(format, option) {
+            console.log('format', format, option)
+            this.subItemOpen = !this.subItemOpen;
+            this.subItemContent.groupColor = this.group.color;
+            this.subItemContent.data = this.item.subitem
+        },
+
+        formatTitle($format) {
+            if ($format.name === 'Name') {
+                return {
+                    'color': 'black',
+                    'width': toPercent($format['width']),
+                    'font-size': 'large',
+                }
+            } else {
+                return {
+                    'width': toPercent($format['width']),
+                    'font-size': 'medium',
+                    'color': 'gray',
+                }
+            }
+        },
+
+        zoomTextArea(format, $option) {
+            console.log('ZoomTextArea', format, $option);
+            let $ref = this.setTextAreaRef(format)
             let $obj = this.$refs[$ref]
             const $rect = $obj.getBoundingClientRect();
             // console.log('before:')
@@ -258,6 +454,9 @@ export default {
             }
             if ($format['type'] === 'longtext') {
                 return 'editLongText' + this.item.id
+            }
+            if ($format['type'] === 'subitem') {
+                return 'subitem' + this.item.id
             }
         },
     }

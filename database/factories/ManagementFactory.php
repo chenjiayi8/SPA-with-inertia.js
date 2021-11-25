@@ -5,8 +5,6 @@ namespace Database\Factories;
 use App\Models\Management;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Database\Eloquent\Model;
-use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 
 class ManagementFactory extends Factory
@@ -17,7 +15,7 @@ class ManagementFactory extends Factory
      * @return array
      */
 
-    public function createGroup()
+    public function createGroup(): array
     {
         $date = new UTCDateTime;
         $date->toDateTime();
@@ -34,7 +32,7 @@ class ManagementFactory extends Factory
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
             ['name' => 'Time Tracking', 'type' => 'tracking', 'width' => 10],
             ['name' => 'Note', 'type' => 'longtext', 'width' => 20],
-            ['name' => 'Subitems', 'type' => 'subitem', 'width' => 10],
+            ['name' => 'subitems', 'type' => 'subitem', 'width' => 10],
             ['name' => 'Status', 'type' => 'status', 'width' => 10],
             ['name' => 'Priority', 'type' => 'priority', 'width' => 10],
             ['name' => 'Due Date', 'type' => 'date', 'width' => 10],
@@ -57,7 +55,7 @@ class ManagementFactory extends Factory
         $item['Time Tracking'] = $time_tracking;
         $item['Time Tracking'] = $this->updateTimeHours($item['Time Tracking']);
         $item['Note'] = $this->faker->paragraph();
-        $item['Subitems'] = $this->fakeSubitems(2);
+        $item['subitems'] = $this->fakeSubitems(2);
         $item['Status'] = rand(0, 4);
         $item['Priority'] = rand(0, 4);
         $item['Due Date'] = new UTCDateTime(strtotime($this->faker->date()));
@@ -65,15 +63,15 @@ class ManagementFactory extends Factory
         $item['formats'] = [
             ['name' => 'Name', 'type' => 'text', 'width' => 15],
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
+            ['name' => 'Note', 'type' => 'longtext', 'width' => 30],
             ['name' => 'URL', 'type' => 'url', 'width' => 20],
             ['name' => 'Status', 'type' => 'status', 'width' => 10],
-            ['name' => 'Note', 'type' => 'longtext', 'width' => 20],
             ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 15],
         ];
         return $item;
     }
 
-    public function fakeItems($numItems)
+    public function fakeItems($numItems): array
     {
         $items = [];
         for ($i = 0; $i <= $numItems; $i++) {
@@ -86,7 +84,7 @@ class ManagementFactory extends Factory
 
 
 
-    public function fakeSubitems($numSubitems)
+    public function fakeSubitems($numSubitems): array
     {
         $subItems = [];
         for ($i = 0; $i <= $numSubitems; $i++) {
@@ -106,8 +104,8 @@ class ManagementFactory extends Factory
         $subItem['created_at'] = $date;
         $subItem['Name'] = $this->faker->word();
         $subItem['Person'] = [$user->id];
-        $subItem['URL'] = $this->faker->url();
         $subItem['Note'] = $this->faker->paragraph();
+        $subItem['URL'] = $this->faker->url();
         $subItem['Status'] = rand(0, 4);
         $subItem['LastUpdated'] = $date;
         return $subItem;
