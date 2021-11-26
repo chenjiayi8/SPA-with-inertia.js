@@ -16,7 +16,6 @@
                         :href="setCellValue(format)"
                         v-html="setCellValue(format)"
                         :ref="getRef(format)"
-                        target="_blank"
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
                         @click="() => itemAction(format,['click', 'buttonTrigger'])"
@@ -116,6 +115,8 @@ export default {
             timer: null
         });
 
+        const textAreaZoomed = ref(false);
+
         const hintObj = ref({
             show: false,
             x: 0,
@@ -160,6 +161,7 @@ export default {
             hintContent,
             hintFormat,
             clickTimer,
+            textAreaZoomed,
             hintObj,
             mousemove
         }
@@ -403,10 +405,8 @@ export default {
                     break;
                 }
 
-
                 default : {
                 }
-
             }
         },
 
@@ -414,18 +414,17 @@ export default {
             let key = format.name + '.' + options[0];
             switch (key) {
                 case 'URL.mouseover' : {
-                    let obj = this.$refs[this.setRef(format)]
+                    let obj = this.$refs[this.setRef(format)];
                     obj.style.textDecoration = 'underline';
+                    obj.target ='_blank';
                     break;
                 }
                 case 'URL.mouseleave' : {
-                    let obj = this.$refs[this.setRef(format)]
+                    let obj = this.$refs[this.setRef(format)];
                     obj.style.textDecoration = 'none';
                     break;
                 }
             }
-
-
         },
 
         textAreaHintAction(format, options, event) {
@@ -434,11 +433,15 @@ export default {
             console.log(key);
             switch (key) {
                 case 'Note.mouseover': {
+                    let obj = this.$refs[this.setRef(format)]
+                    if (this.textAreaZoomed){
+                        break;
+                    }
                     console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.ToggleHint('mouseTrigger');
-                    let obj = this.$refs[this.setRef(format)]
+                    this.hintTriggers['mouseTrigger'] = true;
+                    this.hintObj.show = true;
                     this.hintObj.content = obj.innerHTML;
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
@@ -448,7 +451,8 @@ export default {
                 }
                 case 'Note.mouseleave': {
                     console.log('hint close')
-                    this.ToggleHint('mouseTrigger');
+                    this.hintTriggers['mouseTrigger'] = false;
+                    this.hintObj.show = false;
                     break;
                 }
             }
@@ -476,15 +480,15 @@ export default {
                     $obj.cols = 20;
                 }
                 $obj.style.zIndex = '1';
-                // $obj.style.top = $obj.rect_initial.top - 50;
-                // $obj.style.x = $obj.rect_initial.x - 100;
-                // $obj.style.y = $obj.rect_initial.y - 100;
-
+                this.textAreaZoomed = true;
+                //close hint when zoomed
+                this.textAreaHintAction(format, ['mouseleave']);
             } else {
                 $obj.style.position = 'relative';
                 $obj.rows = $obj.rect_initial.rows;
                 $obj.cols = $obj.rect_initial.cols
                 $obj.style.zIndex = '0';
+                this.textAreaZoomed = false;
             }
         },
 
