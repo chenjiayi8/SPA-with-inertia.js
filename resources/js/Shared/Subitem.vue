@@ -55,6 +55,15 @@
 </template>
 
 <script>
+/**
+ *
+ * @typedef {Array} group.statuses
+ * @typedef {Array} group.priorities
+ * @typedef {Date} str.$date
+ * @typedef {Number} date.$numberLong
+ *
+ */
+
 import {ref} from "vue";
 import Popup from "./Popup";
 import Hint from "./Hint";
@@ -72,13 +81,13 @@ function zeroPad(num, places) {
     return Array(+(zero > 0 && zero)).join("0") + num;
 }
 
-function parseStringDate($s) {
-    let $d = new Date(parseInt($s));
+function parseStringDate(str) {
+    let $d = new Date(parseInt(str));
     return $d.toLocaleDateString('en-GB');
 }
 
-function parseStringDateTime($s) {
-    let $d = new Date(parseInt($s));
+function parseStringDateTime(str) {
+    let $d = new Date(parseInt(str));
     return $d.toLocaleDateString('en-GB') + '\n ' + zeroPad($d.getHours(), 2) + ":" + zeroPad($d.getMinutes(), 2) + ":" + zeroPad($d.getSeconds(), 2);
 }
 
@@ -91,7 +100,7 @@ export default {
 
         const popupContent = ref({
             name: '',
-            choices: [],
+            choices: Array,
             format: '',
             targetField: '',
         });
@@ -118,7 +127,7 @@ export default {
             x: 0,
             y: 0,
             content: '',
-            format: '',
+            format: {},
         })
 
         const TogglePopup = (trigger) => {
@@ -145,6 +154,7 @@ export default {
     },
     components: {Popup, Hint},
 
+
     props: {
         subitem: Object,
         item: Object,
@@ -154,9 +164,9 @@ export default {
     methods: {
         chooseStateMenu(targetField, index, trigger) {
             let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
-            let ref=targetField.toLowerCase()+this.subitem.id;
-            let obj=this.$refs[ref];
-            obj.innerHTML=this.group[itemField][index].name;
+            let ref = targetField.toLowerCase() + this.subitem.id;
+            let obj = this.$refs[ref];
+            obj.innerHTML = this.group[itemField][index].name;
             this.subitem[targetField] = index;
             this.TogglePopup(trigger);
         },
@@ -476,11 +486,10 @@ export default {
         },
 
         getRef(format, option = null) {
-            let ref = this.setRef(format, option)
             // console.log('getRef')
             // console.log(format, option)
             // console.log(ref)
-            return ref;
+            return this.setRef(format, option);
         },
 
         setRef($format) {

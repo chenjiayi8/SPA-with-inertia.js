@@ -7,9 +7,14 @@
                         style="height: 50px; width: 20px;"
                         :style="{'background-color': group.color}"
                 ></button>
+                <div v-if="format.type === 'tracking'" class="flex space-x-2">
+                    <button class="fa-2x" :ref="'trackingPlayBtn'+item.id"
+                            :class="trackingObj.isTimeTracking ? 'far fa-stop-circle text-red-500':'fas fa-play-circle text-blue-500'"
+                            @click="trackPlayAction('trackingPlayBtn'+item.id)"></button>
+                </div>
                 <div v-if="format.name === 'subitems'" class="flex space-x-2">
                     <i class="fas fa-1x fa-chevron-right"
-                       :class=" subItemOpen ? 'transform rotate-90 ':''"></i>
+                       :class="subItemOpen ? 'transform rotate-90 ':''"></i>
                     <i class="fas fa-list"></i>
                 </div>
 
@@ -90,6 +95,7 @@ import Subitem from "./Subitem";
 import {ref} from 'vue';
 import Popup from './Popup.vue'
 import Hint from "./Hint";
+import {now} from "lodash/date";
 
 
 function toPercent($number, $float = 0) {
@@ -146,8 +152,13 @@ export default {
 
         const subItemContent = ref({
             groupColor: '',
-            data:[],
-            formats:[],
+            data: [],
+            formats: [],
+        });
+
+        const trackingObj = ref({
+            isTimeTracking: false,
+            timer: null,
         });
 
         const TogglePopup = (trigger) => {
@@ -161,6 +172,7 @@ export default {
             popupContent,
             subItemOpen,
             subItemContent,
+            trackingObj,
         }
     },
 
@@ -172,13 +184,49 @@ export default {
     },
 
     methods: {
+        updateTimeTracking() {
+            if (this.trackingObj.timer !== null) {
+                let ref = 'trackingShowBtn' + this.item.id;
+                let obj = this.$refs[ref];
+                let startSecs = this.item['Time Tracking']['total'];
+                let addedSeconds = (now() - new Date(this.trackingObj.timer)) / 1000;
+                obj.innerHTML = this.parseTracking(startSecs + addedSeconds);
+            }
+        },
+        parseTracking(sec) {
+            let days = Math.floor(sec / 86400); // get days
+            sec -= days * 86400;
+            let hours = Math.floor(sec / 3600); // get hours
+            sec -= hours * 3600;
+            let minutes = Math.floor(sec / 60); // get minutes
+            sec -= minutes * 60;
+            let seconds = Math.floor(sec); //  get seconds
+            let result = ''
+            result += days > 0 ? days + 'd ' : ''
+            result += hours > 0 ? hours + 'h ' : ''
+            result += minutes > 0 ? minutes + 'm ' : ''
+            result += seconds > 0 ? seconds + 's' : ''
+            return result; // Return is 1d 3h 4m 5s
+        },
+
         chooseStateMenu(targetField, index, trigger) {
-            let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
-            let ref=targetField.toLowerCase()+this.item.id;
-            console.log(ref);
-            let obj=this.$refs[ref];
-            obj.innerHTML=this.group[itemField][index].name;
-            this.item[targetField] = index;
+            let itemField = ''
+            let ref = ''
+            switch (targetField) {
+                case 'Status':
+                case 'Priority':
+                    itemField = targetField === 'Status' ? 'statuses' : 'priorities';
+                    ref = targetField.toLowerCase() + this.item.id;
+                    let obj = this.$refs[ref];
+                    obj.innerHTML = this.group[itemField][index].name;
+                    this.item[targetField] = index;
+                    break;
+                case 'Time Tracking':
+                    this.trackEditAction('trackingShowBtn' + this.item.id);
+                    break;
+                default:
+                    console.log(targetField);
+            }
             this.TogglePopup(trigger);
         },
 
@@ -197,6 +245,11 @@ export default {
                         'align-items': 'center'
                     }
                 }
+                case 'Time Tracking': {
+                    return {
+                        'align-items': 'center'
+                    }
+                }
                 case 'subitems': {
                     return {
                         'align-items': 'center'
@@ -209,6 +262,9 @@ export default {
             switch (format.name) {
                 case 'Name': {
                     return 'flex justify-between space-x-4'
+                }
+                case 'Time Tracking': {
+                    return 'flex space-x-2'
                 }
                 case 'subitems': {
                     return 'flex space-x-2'
@@ -315,11 +371,11 @@ export default {
                 case 'longtext':
                     return 'textarea';
                 case 'tracking':
-                    return 'span';
+                    return 'button';
                 case 'datetime':
                     return 'span';
                 case 'date':
-                    return 'span';
+                    return 'button';
             }
         },
 
@@ -340,7 +396,7 @@ export default {
                 case 'longtext':
                     return this.item[$format.name];
                 case 'tracking':
-                    return this.item[$format.name]['total'];
+                    return this.parseTracking(this.item[$format.name]['total']);
                 case 'datetime':
                     return parseStringDateTime(this.item[$format.name].$date.$numberLong);
                 case 'date':
@@ -417,7 +473,9 @@ export default {
 
         itemAction(format, options) {
             let key = format.name + '.' + options[0];
-            console.log(key)
+            if (!['mouseleave', 'mouseover'].includes(options[0])) {
+                console.log(key)
+            }
             switch (key) {
                 case 'Note.mouseleave':
                 case 'Note.mouseover': {
@@ -439,6 +497,11 @@ export default {
 
                 case 'subitems.click': {
                     this.openSubitems(format, options[1]);
+                    break;
+                }
+
+                case 'Time Tracking.click': {
+                    this.trackEditAction('trackingShowBtn' + this.item.id)
                     break;
                 }
 
@@ -536,12 +599,72 @@ export default {
             }
         },
 
+        trackPlayAction(ref) {
+            console.log('trackPlayAction', ref);
+            if (!this.trackingObj.isTimeTracking) {
+                this.trackingObj.timer = now();
+                setInterval(this.updateTimeTracking, 1000);
+                this.createTrackingRecord();
+            } else {
+                this.trackingObj.timer = null
+                clearInterval(this.updateTimeTracking);
+                this.postProcessTrackingRecord();
+            }
+            this.trackingObj.isTimeTracking = !this.trackingObj.isTimeTracking;
+        },
+
+        trackEditAction(ref) {
+            console.log('trackEditAction', ref);
+        },
+
+        createTrackingRecord: function () {
+            // check if last record is stopped
+            let createRecord = (id = 0) => {
+                return Object({
+                    'id': id,
+                    'Start time': new Date(now()),
+                    'End time': null,
+                    'Remark': '',
+                    'Work hour': 0
+                });
+            }
+            if (this.item['Time Tracking']['records'].length > 0) {
+                let index = this.item['Time Tracking']['records'].length
+                let record = this.item['Time Tracking']['records'][index - 1]
+                if (record['End time'] === null) {
+                    this.popupContent.name = 'Alert';
+                    this.popupContent.targetField = 'Time Tracking';
+                    this.popupContent.choices = Array(Object({
+                        'name': 'Last time tracking is not stopped!',
+                        'color': 'red',
+                        'format': 'width: 150px; color: white; background-color: red',
+                        'white-space': 'normal',
+                        'overflow-wrap': 'normal',
+                    }))
+                    this.TogglePopup('buttonTrigger');
+                } else {
+                    this.item['Time Tracking']['records'].push(createRecord(index));
+                    console.log('createTrackingRecord', this.item['Time Tracking']['records'])
+                }
+
+            } else {//very first record
+                let newRecord = createRecord();
+            }
+        },
+
+        postProcessTrackingRecord() {
+            // check if last record is stoped
+            if (this.item['Time Tracking'].length > 0) {
+                let record = this.item['Time Tracking']['records'][-1]
+                console.log(record);
+            }
+        },
+
         getRef(format, option = null) {
-            let ref = this.setRef(format, option)
             // console.log('getRef')
             // console.log(format, option)
             // console.log(ref)
-            return ref;
+            return this.setRef(format, option);
         },
 
         setRef($format, option = null) {
@@ -560,6 +683,10 @@ export default {
             if ($format['name'] === 'Priority') {
                 return 'priority' + this.item.id
             }
+            if ($format['type'] === 'tracking') {
+                return 'trackingShowBtn' + this.item.id
+            }
+
 
         },
     }

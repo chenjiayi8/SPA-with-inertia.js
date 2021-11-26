@@ -30,13 +30,13 @@ class ManagementFactory extends Factory
         $group['formats'] = [
             ['name' => 'Name', 'type' => 'text', 'width' => 15],
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
-            ['name' => 'Time Tracking', 'type' => 'tracking', 'width' => 10],
+            ['name' => 'Time Tracking', 'type' => 'tracking', 'width' => 15],
             ['name' => 'Note', 'type' => 'longtext', 'width' => 20],
             ['name' => 'subitems', 'type' => 'subitem', 'width' => 10],
             ['name' => 'Status', 'type' => 'status', 'width' => 10],
             ['name' => 'Priority', 'type' => 'priority', 'width' => 10],
             ['name' => 'Due Date', 'type' => 'date', 'width' => 10],
-            ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 15],
+            ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 10],
         ];
         $group['LastUpdated'] = $date;
         return $group;
@@ -53,7 +53,7 @@ class ManagementFactory extends Factory
         $item['Person'] = [$user->id];
         $time_tracking = ['records' => $this->fakerTimeTrackingRecords(3), 'total' => 0.0];
         $item['Time Tracking'] = $time_tracking;
-        $item['Time Tracking'] = $this->updateTimeHours($item['Time Tracking']);
+        $item['Time Tracking'] = $this->updateTrackingTime($item['Time Tracking']);
         $item['Note'] = $this->faker->paragraph();
         $item['subitems'] = $this->fakeSubitems(2);
         $item['Status'] = rand(0, 4);
@@ -152,28 +152,25 @@ class ManagementFactory extends Factory
         $date = new UTCDateTime;
         $record['id'] = 0;
         $record['Start time'] = $date;
-        $add_hours = rand(0, 2);
-        $add_minutes = 1 + 60 * (mt_rand() / mt_getrandmax());
-        $add_time_string = '+ ';
-        $add_time_string .= $add_hours ? sprintf('%d hour ', $add_hours) : '';
-        $add_time_string .= $add_minutes ? sprintf('%d minute ', $add_minutes) : '';
+        $add_seconds = rand(30, 86400);
+        $add_time_string = sprintf('%d seconds ', $add_seconds);
         $date_new = $date->toDateTime();
         $date_new->modify($add_time_string);
         $record['End time'] = new UTCDateTime($date_new);
         $record['Remark'] = '';
-        $record['Work hour'] = round($add_hours + $add_minutes / 60, 2);
+        $record['Work hour'] = $add_seconds;
         return $record;
     }
 
 
-    public function updateTimeHours($time_tracking)
+    public function updateTrackingTime($time_tracking)
     {
         $records = $time_tracking['records'];
-        $hours = 0.0;
+        $seconds = 0.0;
         foreach ($records as $record) {
-            $hours += $record['Work hour'];
+            $seconds += $record['Work hour'];
         }
-        $time_tracking['total'] = round($hours, 2);
+        $time_tracking['total'] = round($seconds, 2);
         return $time_tracking;
     }
 
