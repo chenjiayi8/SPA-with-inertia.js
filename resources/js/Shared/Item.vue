@@ -16,10 +16,12 @@
                 <div>
                     <component
                         :is="setCellType(format)"
-                        :href="setCellValue(format)"
                         v-html="setCellValue(format)"
-                        :ref="setTextAreaRef(format)"
-                        @click="itemAction(format,['click', 'buttonTrigger'])"
+                        :ref="getRef(format)"
+                        v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
+                        v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
+                        @click="() => itemAction(format,['click', 'buttonTrigger'])"
+                        @ondblclick="() => itemAction(format,['dblclick', 'buttonTrigger'])"
                         @focus="itemAction(format, ['focus','in'])"
                         @blur="itemAction(format, ['focus','out'])"
                         :style="formatContent(format)"
@@ -28,18 +30,31 @@
 
                     <Popup
                         v-if="popupTriggers.buttonTrigger"
-                        :TogglePopup="() => TogglePopup('buttonTrigger')">
+                        :TogglePopup="() => TogglePopup('buttonTrigger')"
+                    >
                         <h2>{{ popupContent.name }}</h2>
                         <div>
-                            <div v-for="choice in popupContent.choices">
+                            <div v-for="(choice, index) in popupContent.choices">
                                 <button :style="choice.format"
-                                        @click="chooseMenu(choice, 'buttonTrigger')">
+                                        @click="chooseStateMenu(popupContent.targetField, index, 'buttonTrigger')">
                                     {{ choice.name }}
                                 </button>
                             </div>
 
                         </div>
                     </Popup>
+
+                    <Hint
+                        v-if="hintTriggers.mouseTrigger"
+                        :ToggleHint="() => ToggleHint('mouseTrigger')"
+                        :style="hintObj.format">
+                        <div>
+                            <div>
+                                {{ hintObj.content }}
+                            </div>
+                        </div>
+                    </Hint>
+
                 </div>
             </div>
         </td>
@@ -74,6 +89,7 @@
 import Subitem from "./Subitem";
 import {ref} from 'vue';
 import Popup from './Popup.vue'
+import Hint from "./Hint";
 
 
 function toPercent($number, $float = 0) {
@@ -107,10 +123,23 @@ export default {
             timedTrigger: false
         });
 
+        const hintTriggers = ref({
+            mouseTrigger: false,
+        });
+
+        const hintObj = ref({
+            show: false,
+            x: 0,
+            y: 0,
+            content: '',
+            format: '',
+        })
+
         const popupContent = ref({
             name: '',
             choices: [],
             format: '',
+            targetField: '',
         });
 
         const subItemOpen = ref(false);
@@ -125,8 +154,9 @@ export default {
             popupTriggers.value[trigger] = !popupTriggers.value[trigger]
         };
         return {
-            Popup,
             popupTriggers,
+            hintTriggers,
+            hintObj,
             TogglePopup,
             popupContent,
             subItemOpen,
@@ -134,7 +164,7 @@ export default {
         }
     },
 
-    components: {Subitem, Popup},
+    components: {Subitem, Popup, Hint},
 
     props: {
         item: Object,
@@ -142,8 +172,13 @@ export default {
     },
 
     methods: {
-        chooseMenu(item, trigger) {
-            console.log(item);
+        chooseStateMenu(targetField, index, trigger) {
+            let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
+            let ref=targetField.toLowerCase()+this.item.id;
+            console.log(ref);
+            let obj=this.$refs[ref];
+            obj.innerHTML=this.group[itemField][index].name;
+            this.item[targetField] = index;
             this.TogglePopup(trigger);
         },
 
@@ -353,24 +388,57 @@ export default {
             this.TogglePopup(trigger);
         },
 
-        itemAction(format, option) {
-            let key = format.name + '.' + option[0];
+        stateAction(format, options) {
+            let trigger = options[1]
+            console.log('stateAction', format, trigger);
+            const default_format = 'height: 20px; width: 100px; color: white;'
+            switch (format.name) {
+                case 'Status': {
+                    this.popupContent.name = 'Status';
+                    let choices = this.group['statuses'];
+                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    this.popupContent.choices = choices;
+                    this.popupContent.targetField = 'Status';
+                    break;
+                }
+                case 'Priority':
+                    this.popupContent.name = 'Priority'
+                    let choices = this.group['priorities'];
+                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    this.popupContent.choices = choices;
+                    this.popupContent.targetField = 'Priority';
+                    break;
+                default: {
+                    console.log('stateAction: unmatched choice')
+                }
+            }
+            this.TogglePopup(trigger);
+        },
+
+        itemAction(format, options) {
+            let key = format.name + '.' + options[0];
             console.log(key)
             switch (key) {
+                case 'Note.mouseleave':
+                case 'Note.mouseover': {
+                    this.textAreaHintAction(format, options, event)
+                    break;
+                }
+
                 case 'Name.focus':
                 case 'Note.focus' : {
-                    this.zoomTextArea(format, option[1]);
+                    this.textAreaZoomAction(format, options);
                     break;
                 }
 
                 case 'Priority.click':
                 case 'Status.click': {
-                    this.setPopupContent(format, option[1])
+                    this.stateAction(format, options)
                     break;
                 }
 
                 case 'subitems.click': {
-                    this.openSubitems(format, option[1]);
+                    this.openSubitems(format, options[1]);
                     break;
                 }
 
@@ -403,30 +471,50 @@ export default {
             }
         },
 
-        zoomTextArea(format, $option) {
-            console.log('ZoomTextArea', format, $option);
-            let $ref = this.setTextAreaRef(format)
+        textAreaHintAction(format, options, event) {
+            // console.log('textAreaHintAction')
+            let key = format.name + '.' + options[0];
+            // console.log(key);
+            switch (key) {
+                case 'Note.mouseover': {
+                    let obj = this.$refs[this.setRef(format)]
+                    if (this.textAreaZoomed) {
+                        break;
+                    }
+                    // console.log('hint show')
+                    this.hintObj.x = event.clientX;
+                    this.hintObj.y = event.clientY;
+                    this.hintTriggers['mouseTrigger'] = true;
+                    this.hintObj.show = true;
+                    this.hintObj.content = obj.innerHTML;
+                    this.hintObj.format = {
+                        'top': (this.hintObj.y - 40) + 'px',
+                        'left': (this.hintObj.x + 40) + 'px',
+                    }
+                    break;
+                }
+                case 'Note.mouseleave': {
+                    // console.log('hint close')
+                    this.hintTriggers['mouseTrigger'] = false;
+                    this.hintObj.show = false;
+                    break;
+                }
+            }
+
+        },
+
+        textAreaZoomAction(format, options) {
+            console.log('textAreaZoomAction', format, options);
+            let $ref = this.setRef(format)
+            console.log(format, options)
             let $obj = this.$refs[$ref]
             const $rect = $obj.getBoundingClientRect();
-            // console.log('before:')
-            // console.log($obj.getBoundingClientRect());
             if (!$obj.hasOwnProperty('rect_initial')) {
-                // console.log($obj.style.zIndex);
                 $obj.rect_initial = $rect;
                 $obj.rect_initial.rows = $obj.rows;
                 $obj.rect_initial.cols = $obj.cols;
-                // $obj.style.position = 'absolute';
-                // $obj.style.x = $obj.rect_initial.x;
-                // $obj.style.y = $obj.rect_initial.y;
-                // $obj.style.width = $obj.rect_initial.width;
-                // $obj.style.height = $obj.rect_initial.height;
-                // $obj.style.top = $obj.rect_initial.top;
-                // $obj.style.right = $obj.rect_initial.right;
-                // $obj.style.bottom = $obj.rect_initial.bottom;
-                // $obj.style.left = $obj.rect_initial.left;
-
             }
-            if ($option === 'in') {
+            if (options[1] === 'in') {
                 $obj.style.position = 'absolute';
                 if ($ref.toLowerCase().includes('longtext')) {
                     $obj.rows = 10;
@@ -436,28 +524,43 @@ export default {
                     $obj.cols = 20;
                 }
                 $obj.style.zIndex = '1';
-                // $obj.style.top = $obj.rect_initial.top - 50;
-                // $obj.style.x = $obj.rect_initial.x - 100;
-                // $obj.style.y = $obj.rect_initial.y - 100;
-
+                this.textAreaZoomed = true;
+                //close hint when zoomed
+                this.textAreaHintAction(format, ['mouseleave']);
             } else {
                 $obj.style.position = 'relative';
                 $obj.rows = $obj.rect_initial.rows;
                 $obj.cols = $obj.rect_initial.cols
                 $obj.style.zIndex = '0';
+                this.textAreaZoomed = false;
             }
         },
 
-        setTextAreaRef($format) {
+        getRef(format, option = null) {
+            let ref = this.setRef(format, option)
+            // console.log('getRef')
+            // console.log(format, option)
+            // console.log(ref)
+            return ref;
+        },
+
+        setRef($format, option = null) {
             if ($format['type'] === 'text') {
-                return 'editText' + this.item.id
+                return 'text' + this.item.id
             }
             if ($format['type'] === 'longtext') {
-                return 'editLongText' + this.item.id
+                return 'longtext' + this.item.id
             }
-            if ($format['type'] === 'subitem') {
-                return 'subitem' + this.item.id
+            if ($format['type'] === 'url') {
+                return 'url' + this.item.id
             }
+            if ($format['name'] === 'Status') {
+                return 'status' + this.item.id
+            }
+            if ($format['name'] === 'Priority') {
+                return 'priority' + this.item.id
+            }
+
         },
     }
 }

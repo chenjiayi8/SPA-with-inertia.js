@@ -9,11 +9,8 @@
                 ></button>
 
                 <div>
-
-
                     <component
                         :is="setCellType(format)"
-                        :href="setCellValue(format)"
                         v-html="setCellValue(format)"
                         :ref="getRef(format)"
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
@@ -31,9 +28,9 @@
                         :TogglePopup="() => TogglePopup('buttonTrigger')">
                         <h2>{{ popupContent.name }}</h2>
                         <div>
-                            <div v-for="choice in popupContent.choices">
+                            <div v-for="(choice, index) in popupContent.choices">
                                 <button :style="choice.format"
-                                        @click="chooseMenu(choice, 'buttonTrigger')">
+                                        @click="chooseStateMenu(popupContent.targetField, index, 'buttonTrigger')">
                                     {{ choice.name }}
                                 </button>
                             </div>
@@ -49,10 +46,8 @@
                             <div>
                                 {{ hintObj.content }}
                             </div>
-
                         </div>
                     </Hint>
-
                 </div>
             </div>
         </td>
@@ -98,6 +93,7 @@ export default {
             name: '',
             choices: [],
             format: '',
+            targetField: '',
         });
 
         const hintTriggers = ref({
@@ -133,24 +129,6 @@ export default {
             hintTriggers.value[trigger] = !hintTriggers.value[trigger]
         };
 
-        const mousemove = (e) => {
-            hintObj.x = e.clientX;
-            hintObj.y = e.clientY;
-            console.log(hintObj.x, hintObj.y);
-        };
-
-        // watch(hintObj, debounce(function mousemove(e){
-        //     hintObj.x = e.clientX;
-        //     hintObj.y = e.clientY;
-        //     console.log(hintObj.x, hintObj.y)
-        // }, 500));
-
-        // watch(hintObj, debounce(function mousemove(e){
-        //     hintObj.x = e.clientX;
-        //     hintObj.y = e.clientY;
-        //     console.log(hintObj.x, hintObj.y)
-        // }, 500));
-
         return {
             Popup,
             popupTriggers,
@@ -163,7 +141,6 @@ export default {
             clickTimer,
             textAreaZoomed,
             hintObj,
-            mousemove
         }
     },
     components: {Popup, Hint},
@@ -175,9 +152,12 @@ export default {
     },
 
     methods: {
-
-        chooseMenu(item, trigger) {
-            console.log(item);
+        chooseStateMenu(targetField, index, trigger) {
+            let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
+            let ref=targetField.toLowerCase()+this.subitem.id;
+            let obj=this.$refs[ref];
+            obj.innerHTML=this.group[itemField][index].name;
+            this.subitem[targetField] = index;
             this.TogglePopup(trigger);
         },
 
@@ -225,7 +205,7 @@ export default {
                         'overflow': 'hidden',
                         'color': 'white',
                         'font-size': 'small',
-                        'background-color': this.group.statuses[parseInt(this.item[$format.name])]['color'],
+                        'background-color': this.group.statuses[parseInt(this.subitem[$format.name])]['color'],
                     }
                 case 'priority':
                     return {
@@ -355,6 +335,7 @@ export default {
                     let choices = this.group['statuses'];
                     choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
                     this.popupContent.choices = choices;
+                    this.popupContent.targetField = 'Status';
                     break;
                 }
                 case 'Priority':
@@ -362,6 +343,7 @@ export default {
                     let choices = this.group['priorities'];
                     choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
                     this.popupContent.choices = choices;
+                    this.popupContent.targetField = 'Priority';
                     break;
                 default: {
                     console.log('stateAction: unmatched choice')
@@ -372,7 +354,7 @@ export default {
 
         itemAction(format, options, event) {
             let key = format.name + '.' + options[0];
-            console.log(key, event)
+            // console.log(key, event)
 
             switch (key) {
                 case 'Note.mouseleave':
@@ -400,7 +382,7 @@ export default {
 
                 case 'URL.mouseleave':
                 case 'URL.mouseover' : {
-                    console.log('wait URL mouse over action')
+                    // console.log('wait URL mouse over action')
                     this.urlAction(format, options);
                     break;
                 }
@@ -416,7 +398,8 @@ export default {
                 case 'URL.mouseover' : {
                     let obj = this.$refs[this.setRef(format)];
                     obj.style.textDecoration = 'underline';
-                    obj.target ='_blank';
+                    obj.target = '_blank';
+                    obj.href = obj.innerHTML;
                     break;
                 }
                 case 'URL.mouseleave' : {
@@ -428,16 +411,16 @@ export default {
         },
 
         textAreaHintAction(format, options, event) {
-            console.log('textAreaHintAction')
+            // console.log('textAreaHintAction')
             let key = format.name + '.' + options[0];
-            console.log(key);
+            // console.log(key);
             switch (key) {
                 case 'Note.mouseover': {
                     let obj = this.$refs[this.setRef(format)]
-                    if (this.textAreaZoomed){
+                    if (this.textAreaZoomed) {
                         break;
                     }
-                    console.log('hint show')
+                    // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
                     this.hintTriggers['mouseTrigger'] = true;
@@ -450,7 +433,7 @@ export default {
                     break;
                 }
                 case 'Note.mouseleave': {
-                    console.log('hint close')
+                    // console.log('hint close')
                     this.hintTriggers['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
@@ -500,15 +483,21 @@ export default {
             return ref;
         },
 
-        setRef($format, option = null) {
+        setRef($format) {
             if ($format['type'] === 'text') {
-                return 'editText' + this.item.id
+                return 'editText' + this.subitem.id
             }
             if ($format['type'] === 'longtext') {
-                return 'editLongText' + this.item.id
+                return 'editLongText' + this.subitem.id
             }
             if ($format['type'] === 'url') {
-                return 'url' + this.item.id
+                return 'url' + this.subitem.id
+            }
+            if ($format['name'] === 'Status') {
+                return 'status' + this.subitem.id
+            }
+            if ($format['name'] === 'Priority') {
+                return 'priority' + this.subitem.id
             }
 
         },
