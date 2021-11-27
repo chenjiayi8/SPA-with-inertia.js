@@ -13,4 +13,6 @@ class Management extends Eloquent
     protected $collection = 'managements';
 
 
+    protected $guarded = [];
+
 }

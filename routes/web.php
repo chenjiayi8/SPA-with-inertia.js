@@ -119,8 +119,12 @@ Route::middleware('auth')->group(function () {
 //    });
 
 
-    // admin
-    Route::resource('/admin', ManagementController::class)->except('show');
+
 
 
 });
+
+// admin
+//Route::resource('/admin', ManagementController::class)->except('show');
+Route::get('/admin', [ManagementController::class, 'index'])->name('management');
+Route::post('/admin', [ManagementController::class, 'store']);

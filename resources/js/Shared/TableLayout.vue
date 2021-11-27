@@ -23,7 +23,7 @@
   </section>
 
   <section class="p-6">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-7xl mx-auto">
       <slot />
     </div>
   </section>
@@ -34,16 +34,16 @@ import Nav from "./Nav";
 import {Head} from "@inertiajs/inertia-vue3";
 
 export default {
-    name: "Layout",
+    name: "TableLayout",
     components: {Nav, Head},
     computed: {
         username() {
             return this.$page.props.auth ? this.$page.props.auth.user.username : null;
         },
 
-        email(){
-            return this.$page.props.auth ? this.$page.props.auth.user.email : null;
-        }
+        // email(){
+        //     return this.$page.props.auth ? this.$page.props.auth.user.email : null;
+        // }
     }
 };
 

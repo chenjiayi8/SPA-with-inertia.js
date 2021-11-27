@@ -96,6 +96,7 @@ import {ref} from 'vue';
 import Popup from './Popup.vue'
 import Hint from "./Hint";
 import {now} from "lodash/date";
+import {Inertia} from "@inertiajs/inertia";
 
 
 function toPercent($number, $float = 0) {
@@ -164,6 +165,12 @@ export default {
         const TogglePopup = (trigger) => {
             popupTriggers.value[trigger] = !popupTriggers.value[trigger]
         };
+
+        // setTimeout(() => {
+        //     console.log("item triggered");
+        //
+        // }, 1000);
+
         return {
             popupTriggers,
             hintTriggers,

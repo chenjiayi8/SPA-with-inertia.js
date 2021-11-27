@@ -11,9 +11,9 @@ class StoreManagementRequest extends FormRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize($user)
     {
-        return false;
+        return $user->email === 'chenjiayi_344@hotmail.com';
     }
 
     /**

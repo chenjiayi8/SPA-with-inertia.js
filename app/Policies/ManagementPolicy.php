@@ -53,7 +53,7 @@ class ManagementPolicy
      */
     public function update(User $user, Management $management)
     {
-        //
+        return $user->email === 'chenjiayi_344@hotmail.com';
     }
 
     /**
