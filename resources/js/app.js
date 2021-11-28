@@ -11,7 +11,6 @@ createInertiaApp({
         if (page.layout === undefined) {
             page.layout = Layout;
         }
-        console.log(page);
         if (page.name === 'Management') {
             page.layout = TableLayout;
         }

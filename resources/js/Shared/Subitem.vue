@@ -273,7 +273,6 @@ export default {
                     return {
                         'margin-left': '10px',
                         'margin-right': '10px',
-                        'zIndex': '0',
                     }
                 case 'url':
                     return {
@@ -472,11 +471,12 @@ export default {
                     $obj.rows = 2;
                     $obj.cols = 20;
                 }
-                $obj.style.zIndex = '1';
+                $obj.style.zIndex = '10';
                 this.textAreaZoomed = true;
                 //close hint when zoomed
                 this.textAreaHintAction(format, ['mouseleave']);
             } else {
+                this.subitem[format.name] = $obj.value;
                 $obj.style.position = 'relative';
                 $obj.rows = $obj.rect_initial.rows;
                 $obj.cols = $obj.rect_initial.cols

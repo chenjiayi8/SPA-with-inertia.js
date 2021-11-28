@@ -96,7 +96,6 @@ import {ref} from 'vue';
 import Popup from './Popup.vue'
 import Hint from "./Hint";
 import {now} from "lodash/date";
-import {Inertia} from "@inertiajs/inertia";
 
 
 function toPercent($number, $float = 0) {
@@ -157,6 +156,8 @@ export default {
             formats: [],
         });
 
+        const textAreaZoomed = ref(false);
+
         const trackingObj = ref({
             isTimeTracking: false,
             timer: null,
@@ -179,6 +180,7 @@ export default {
             popupContent,
             subItemOpen,
             subItemContent,
+            textAreaZoomed,
             trackingObj,
         }
     },
@@ -345,7 +347,6 @@ export default {
                     return {
                         'margin-left': '10px',
                         'margin-right': '10px',
-                        'zIndex': '0',
                     }
                 case 'subitem':
                     return {
@@ -593,11 +594,12 @@ export default {
                     $obj.rows = 2;
                     $obj.cols = 20;
                 }
-                $obj.style.zIndex = '1';
+                $obj.style.zIndex = '10';
                 this.textAreaZoomed = true;
                 //close hint when zoomed
                 this.textAreaHintAction(format, ['mouseleave']);
             } else {
+                this.item[format.name] = $obj.value;
                 $obj.style.position = 'relative';
                 $obj.rows = $obj.rect_initial.rows;
                 $obj.cols = $obj.rect_initial.cols
@@ -607,17 +609,23 @@ export default {
         },
 
         trackPlayAction(ref) {
+            let exitCode = 0;
             console.log('trackPlayAction', ref);
             if (!this.trackingObj.isTimeTracking) {
                 this.trackingObj.timer = now();
-                setInterval(this.updateTimeTracking, 1000);
-                this.createTrackingRecord();
+                exitCode = this.createTrackingRecord();
+                if (exitCode === 0) {
+                    setInterval(this.updateTimeTracking, 1000);
+                }
+
             } else {
                 this.trackingObj.timer = null
                 clearInterval(this.updateTimeTracking);
-                this.postProcessTrackingRecord();
+                 this.postProcessTrackingRecord();
             }
-            this.trackingObj.isTimeTracking = !this.trackingObj.isTimeTracking;
+            if (exitCode === 0) {
+                this.trackingObj.isTimeTracking = !this.trackingObj.isTimeTracking;
+            }
         },
 
         trackEditAction(ref) {
@@ -625,6 +633,7 @@ export default {
         },
 
         createTrackingRecord: function () {
+            let exitCode = 0
             // check if last record is stopped
             let createRecord = (id = 0) => {
                 return Object({
@@ -647,16 +656,18 @@ export default {
                         'format': 'width: 150px; color: white; background-color: red',
                         'white-space': 'normal',
                         'overflow-wrap': 'normal',
-                    }))
+                    }));
+                    exitCode = 1;
                     this.TogglePopup('buttonTrigger');
                 } else {
                     this.item['Time Tracking']['records'].push(createRecord(index));
-                    console.log('createTrackingRecord', this.item['Time Tracking']['records'])
+                    // console.log('createTrackingRecord', this.item['Time Tracking']['records'])
                 }
 
             } else {//very first record
-                let newRecord = createRecord();
+                this.item['Time Tracking']['records'].push(createRecord());
             }
+            return exitCode
         },
 
         postProcessTrackingRecord() {
