@@ -113,6 +113,7 @@ import {ref} from 'vue';
 import Popup from './Popup.vue'
 import Hint from "./Hint";
 import {now} from "lodash/date";
+import {round} from "lodash/math";
 
 
 function toPercent($number, $float = 0) {
@@ -182,7 +183,7 @@ export default {
 
         const trackingObj = ref({
             isTimeTracking: false,
-            timer: null,
+            timer: Date,
         });
 
         const TogglePopup = (trigger) => {
@@ -662,22 +663,24 @@ export default {
         },
 
         trackPlayAction(ref) {
-            let exitCode = 0;
+            // let exitCode = 0;
             console.log('trackPlayAction', ref);
-            if (!this.trackingObj.isTimeTracking) {
-                this.trackingObj.timer = now();
-                exitCode = this.createTrackingRecord();
+            if (this.trackingObj.isTimeTracking === false) {
+                this.trackingObj.timer = new Date(now());
+                let exitCode = this.createTrackingRecord();
                 if (exitCode === 0) {
                     setInterval(this.updateTimeTracking, 1000);
+                    this.trackingObj.isTimeTracking = true;
+                } else {
+                    clearInterval(this.updateTimeTracking);
+                    this.trackingObj.isTimeTracking = false;
                 }
 
             } else {
                 this.trackingObj.timer = null
                 clearInterval(this.updateTimeTracking);
                 this.postProcessTrackingRecord();
-            }
-            if (exitCode === 0) {
-                this.trackingObj.isTimeTracking = !this.trackingObj.isTimeTracking;
+                this.trackingObj.isTimeTracking = false;
             }
         },
 
@@ -697,9 +700,11 @@ export default {
                     'Work hour': 0
                 });
             }
+            //append new tracking record
             if (this.item['Time Tracking']['records'].length > 0) {
                 let index = this.item['Time Tracking']['records'].length
                 let record = this.item['Time Tracking']['records'][index - 1]
+                // check if last record is not stopped
                 if (record['End time'] === null) {
                     this.popupContent.name = 'Alert';
                     this.popupContent.targetField = 'Time Tracking';
@@ -710,11 +715,10 @@ export default {
                         'white-space': 'normal',
                         'overflow-wrap': 'normal',
                     }));
+                    this.TogglePopup('buttonTrigger');//popup alert
                     exitCode = 1;
-                    this.TogglePopup('buttonTrigger');
                 } else {
                     this.item['Time Tracking']['records'].push(createRecord(index));
-                    // console.log('createTrackingRecord', this.item['Time Tracking']['records'])
                 }
 
             } else {//very first record
@@ -724,10 +728,15 @@ export default {
         },
 
         postProcessTrackingRecord() {
-            // check if last record is stoped
-            if (this.item['Time Tracking'].length > 0) {
-                let record = this.item['Time Tracking']['records'][-1]
-                console.log(record);
+            // check if last record is stopped
+            if (this.item['Time Tracking']['records'].length > 0) {
+                let index = this.item['Time Tracking']['records'].length
+                let record = this.item['Time Tracking']['records'][index - 1]
+                record['End time'] = new Date(now());
+                let startTime =  new Date(record['Start time'])
+                record['Work hour'] = round((record['End time']  - startTime) / 1000, 0);
+                this.item['Time Tracking']['records'][index-1] = record;
+                this.item['Time Tracking']['total'] += record['Work hour'];
             }
         },
 
