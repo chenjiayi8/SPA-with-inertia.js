@@ -19,8 +19,10 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                         <Item v-for="item in group.items"
-                              v-bind:item="item"
-                              v-bind:group="group"
+                              :item="item"
+                              :group="group"
+                              :workspace="workspace"
+
                         />
                         </tbody>
                     </table>
@@ -47,6 +49,7 @@ export default {
     components: {Item},
     props: {
         group: Object,
+        workspace: Object,
     },
 
     methods: {

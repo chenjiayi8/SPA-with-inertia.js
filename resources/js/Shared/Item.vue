@@ -17,6 +17,22 @@
                        :class="subItemOpen ? 'transform rotate-90 ':''"></i>
                     <i class="fas fa-list"></i>
                 </div>
+                <div v-if="format.name === 'Person'" class="namesHolder flex items-center"
+                     :ref="'namesHolder'+this.item.id"
+                     v-on:mouseover="personAction('mouseover', $event)"
+                     v-on:mouseleave="personAction('mouseleave', $event)"
+                     :style="{'width': ((1+getNames().length)*30)+'px'}">
+                    <button v-show="this.personObj.buttonShown"
+                            :ref="'personsEdit'+this.item.id" class="circledButton"
+                            style="position: absolute; left: 0px; background-color: blue"
+                            v-on:click="personAction('click', $event)"
+
+                    >+
+                    </button>
+                    <div v-for="name in getNames()" class="circle" :style="name.format">
+                        {{ name.value }}
+                    </div>
+                </div>
 
                 <div>
                     <component
@@ -81,9 +97,10 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
             <Subitem v-for="subitem in item.subitems"
-                     v-bind:subitem="subitem"
-                     v-bind:item="item"
-                     v-bind:group="group"
+                     :subitem="subitem"
+                     :item="item"
+                     :group="group"
+                     :workspace="workspace"
             />
             </tbody>
         </table>
@@ -110,6 +127,7 @@ function zeroPad(num, places) {
     let zero = places - num.toString().length + 1;
     return Array(+(zero > 0 && zero)).join("0") + num;
 }
+
 
 function parseStringDate($s) {
     let $d = new Date(parseInt($s));
@@ -148,6 +166,10 @@ export default {
             targetField: '',
         });
 
+        const personObj = ref({
+            buttonShown: false,
+        });
+
         const subItemOpen = ref(false);
 
         const subItemContent = ref({
@@ -178,6 +200,7 @@ export default {
             hintObj,
             TogglePopup,
             popupContent,
+            personObj,
             subItemOpen,
             subItemContent,
             textAreaZoomed,
@@ -190,6 +213,7 @@ export default {
     props: {
         item: Object,
         group: Object,
+        workspace: Object,
     },
 
     methods: {
@@ -264,6 +288,12 @@ export default {
                         'align-items': 'center'
                     }
                 }
+                case 'Person': {
+                    return {
+                        'text-align': 'center',
+                        'justify-content': 'center',
+                    }
+                }
             }
         },
 
@@ -277,6 +307,9 @@ export default {
                 }
                 case 'subitems': {
                     return 'flex space-x-2'
+                }
+                case 'Person': {
+                    return 'flex'
                 }
             }
         },
@@ -353,6 +386,11 @@ export default {
                         'vertical-align': 'top',
                         'text-align': 'center',
                     }
+                case 'person':
+                    return {
+                        'vertical-align': 'top',
+                        'text-align': 'center',
+                    }
                 default: {
                     return {}
                 }
@@ -367,7 +405,7 @@ export default {
                 case 'text':
                     return 'textarea';
                 case 'person':
-                    return 'span';
+                    return 'div';
                 case 'url':
                     return 'url';
                 case 'status':
@@ -390,19 +428,17 @@ export default {
         setCellValue($format) {
             switch ($format['type']) {
                 case 'text':
+                case 'url':
+                case 'longtext':
                     return this.item[$format.name];
                 case 'person':
-                    return this.item[$format.name];
-                case 'url':
-                    return this.item[$format.name];
+                    return ''
                 case 'status':
                     return this.group.statuses[parseInt(this.item[$format.name])]['name'];
                 case 'priority':
                     return this.group.priorities[parseInt(this.item[$format.name])]['name'];
                 case 'subitem':
                     return this.item[$format.name].length;
-                case 'longtext':
-                    return this.item[$format.name];
                 case 'tracking':
                     return this.parseTracking(this.item[$format.name]['total']);
                 case 'datetime':
@@ -412,19 +448,36 @@ export default {
             }
         },
 
-        moveBackToInitial($ref) {
-            let $obj = this.$refs[$ref]
-            console.log('initial:');
-            console.log($obj.rect_initial);
-            if (!$obj.hasOwnProperty('rect_initial')) {
-                $obj.style.x = $obj.rect_initial.x;
-                $obj.style.y = $obj.rect_initial.y;
-                $obj.style.width = $obj.rect_initial.width;
-                $obj.style.height = $obj.rect_initial.height;
-                $obj.style.top = $obj.rect_initial.top;
-                $obj.style.right = $obj.rect_initial.right;
-                $obj.style.bottom = $obj.rect_initial.bottom;
-                $obj.style.left = $obj.rect_initial.left;
+        getNames() {
+            let nameIds = this.item['Person']
+            let names = []
+            for (let i = 0; i < nameIds.length; i++) {
+                let name = Object()
+                name.value = this.workspace.users[nameIds[i]]['firstName'][0]
+                name.value += this.workspace.users[nameIds[i]]['lastName'][0]
+                name.format = {
+                    'position': 'absolute',
+                    'background': this.workspace.users[nameIds[i]]['color'],
+                    'left': (20 * (1 + i) + (i ===0 ? 2:0)) + 'px',
+                    'zIndex': i,
+                }
+                names.push(name)
+            }
+            return names
+        },
+
+        personAction(action, event) {
+            let ref = ''
+            switch (action) {
+                case 'mouseover':
+                    this.personObj.buttonShown = true;
+                    break;
+                case 'mouseleave':
+                    this.personObj.buttonShown = false;
+                    break;
+                case 'click':
+                    console.log('personAction clicked');
+                    break;
             }
         },
 
@@ -621,7 +674,7 @@ export default {
             } else {
                 this.trackingObj.timer = null
                 clearInterval(this.updateTimeTracking);
-                 this.postProcessTrackingRecord();
+                this.postProcessTrackingRecord();
             }
             if (exitCode === 0) {
                 this.trackingObj.isTimeTracking = !this.trackingObj.isTimeTracking;
@@ -692,6 +745,9 @@ export default {
             if ($format['type'] === 'longtext') {
                 return 'longtext' + this.item.id
             }
+            if ($format['type'] === 'person') {
+                return 'person' + this.item.id
+            }
             if ($format['type'] === 'url') {
                 return 'url' + this.item.id
             }
@@ -713,4 +769,31 @@ export default {
 
 <style scoped>
 
+.circle {
+    width: 25px;
+    height: 25px;
+    border-radius: 12px;
+    font-size: 15px;
+    color: white;
+    line-height: 25px;
+    text-align: center;
+}
+
+.circledButton{
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    font-size: 20px;
+    color: white;
+    line-height: 20px;
+    text-align: center;
+}
+
+.namesHolder {
+    position: relative;
+    text-align: center;
+    height: 25px;
+    border-radius: 12px;
+    vertical-align: center;
+}
 </style>

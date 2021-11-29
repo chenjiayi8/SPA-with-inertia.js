@@ -159,6 +159,7 @@ export default {
         subitem: Object,
         item: Object,
         group: Object,
+        workspace: Object,
     },
 
     methods: {

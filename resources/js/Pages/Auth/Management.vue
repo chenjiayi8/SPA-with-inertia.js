@@ -14,7 +14,8 @@
                 <div class="overflow-hidden sm:rounded-lg">
                     <Group v-for="group in workspace.groups"
                            :key="group.id"
-                           v-bind:group="group"
+                           :group="group"
+                           :workspace="workspace"
                     />
                 </div>
             </div>
