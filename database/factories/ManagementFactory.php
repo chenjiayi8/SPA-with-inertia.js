@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Management;
 use App\Models\User;
+use DateTime;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use MongoDB\BSON\UTCDateTime;
 
@@ -30,11 +31,11 @@ class ManagementFactory extends Factory
 
     public function createGroup(): array
     {
-        $date = new UTCDateTime;
-        $date->toDateTime();
+//        $date = new UTCDateTime;
+//        $date->toDateTime();
         $group = json_decode('');
         $group['id'] = 0;
-        $group['created_at'] = $date;
+        $group['created_at'] = (int)((float)now()->format('Uu')/1000);
         $group['name'] = $this->faker->word();
         $group['color'] = $this->faker->hexColor();
         $group['statuses'] = $this->fakeStatuses(5);
@@ -51,7 +52,7 @@ class ManagementFactory extends Factory
             ['name' => 'Due Date', 'type' => 'date', 'width' => 10],
             ['name' => 'LastUpdated', 'type' => 'datetime', 'width' => 10],
         ];
-        $group['LastUpdated'] = $date;
+        $group['LastUpdated'] = (int)((float)now()->format('Uu')/1000);
         return $group;
     }
 
@@ -90,12 +91,15 @@ class ManagementFactory extends Factory
         return $items;
     }
 
+    public function getFakeDate(){
+        return $this->faker->date();
+    }
+
     public function fakeItem()
     {
-        $date = new UTCDateTime;
         $item = json_decode('');
         $item['id'] = 0;
-        $item['created_at'] = $date;
+        $item['created_at'] = (int)((float)now()->format('Uu')/1000);
         $item['Name'] = $this->faker->word();
         $item['Person'] = ['0', '1'];
         $time_tracking = ['records' => $this->fakerTimeTrackingRecords(3), 'total' => 0.0];
@@ -105,8 +109,8 @@ class ManagementFactory extends Factory
         $item['subitems'] = $this->fakeSubitems(2);
         $item['Status'] = rand(0, 4);
         $item['Priority'] = rand(0, 4);
-        $item['Due Date'] = new UTCDateTime(strtotime($this->faker->date()));
-        $item['LastUpdated'] = $date;
+        $item['Due Date'] = (int)((float)(new DateTime($this->faker->date()))->format('Uu')/1000);
+        $item['LastUpdated'] = (int)((float)now()->format('Uu')/1000);
         $item['formats'] = [
             ['name' => 'Name', 'type' => 'text', 'width' => 15],
             ['name' => 'Person', 'type' => 'person', 'width' => 10],
@@ -132,14 +136,14 @@ class ManagementFactory extends Factory
     public function fakerTimeTrackingRecord()
     {
         $record = json_decode('');
-        $date = new UTCDateTime;
+//        $date = new UTCDateTime;
         $record['id'] = 0;
-        $record['Start time'] = $date;
+        $record['Start time'] = (int)((float)now()->format('Uu')/1000);
         $add_seconds = rand(30, 86400);
         $add_time_string = sprintf('%d seconds ', $add_seconds);
-        $date_new = $date->toDateTime();
+        $date_new = now();
         $date_new->modify($add_time_string);
-        $record['End time'] = new UTCDateTime($date_new);
+        $record['End time'] = (int)((float)now()->format('Uu')/1000);
         $record['Remark'] = '';
         $record['Work hour'] = $add_seconds;
         return $record;
@@ -169,16 +173,16 @@ class ManagementFactory extends Factory
 
     public function fakeSubItem()
     {
-        $date = new UTCDateTime;
+//        $date = new UTCDateTime;
         $subItem = json_decode('');
         $subItem['id'] = 0;
-        $subItem['created_at'] = $date;
+        $subItem['created_at'] = (int)((float)now()->format('Uu')/1000);
         $subItem['Name'] = $this->faker->word();
         $subItem['Person'] = ['0'];
         $subItem['Note'] = $this->faker->paragraph();
         $subItem['URL'] = $this->faker->url();
         $subItem['Status'] = rand(0, 4);
-        $subItem['LastUpdated'] = $date;
+        $subItem['LastUpdated'] = (int)((float)now()->format('Uu')/1000);
         return $subItem;
     }
 

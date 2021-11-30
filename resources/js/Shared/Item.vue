@@ -17,10 +17,18 @@
                        :class="subItemOpen ? 'transform rotate-90 ':''"></i>
                     <i class="fas fa-list"></i>
                 </div>
+                <div v-if="format.name === 'Due Date' && dueObj.initialised" class="flex space-x-2"
+                     :ref="'dueDate'+this.item.id"
+                     v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
+                     v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)">
+                    <i class="fa-1x "
+                       :class="dueObj.overdue ? 'fas fa-exclamation-circle text-red-500':'far fa-circle text-gray-400'"></i>
+                </div>
                 <div v-if="format.name === 'Person'" class="namesHolder flex items-center"
                      :ref="'namesHolder'+this.item.id"
                      v-on:mouseover="personAction('mouseover', $event)"
                      v-on:mouseleave="personAction('mouseleave', $event)"
+                     v-on:change="itemAction(format, ['change', ''], $event)"
                      :style="{'width': ((1+getNames().length)*30)+'px'}">
                     <button v-show="this.personObj.buttonShown"
                             :ref="'personsEdit'+this.item.id" class="circledButton"
@@ -41,6 +49,7 @@
                         :ref="getRef(format)"
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
+                        v-on:change="itemAction(format, ['change', ''], $event)"
                         @click="() => itemAction(format,['click', 'buttonTrigger'])"
                         @ondblclick="() => itemAction(format,['dblclick', 'buttonTrigger'])"
                         @focus="itemAction(format, ['focus','in'])"
@@ -171,6 +180,12 @@ export default {
             buttonShown: false,
         });
 
+        const dueObj = ref({
+            initialised: false,
+            overdue: true,
+            msg: '',
+        });
+
         const subItemOpen = ref(false);
 
         const subItemContent = ref({
@@ -202,6 +217,7 @@ export default {
             TogglePopup,
             popupContent,
             personObj,
+            dueObj,
             subItemOpen,
             subItemContent,
             textAreaZoomed,
@@ -243,6 +259,10 @@ export default {
             return result; // Return is 1d 3h 4m 5s
         },
 
+        setLastUpdateTime(){
+            this.item['LastUpdated'] = new Date().getTime();
+        },
+
         chooseStateMenu(targetField, index, trigger) {
             let itemField = ''
             let ref = ''
@@ -254,9 +274,11 @@ export default {
                     let obj = this.$refs[ref];
                     obj.innerHTML = this.group[itemField][index].name;
                     this.item[targetField] = index;
+                    this.setLastUpdateTime()
                     break;
                 case 'Time Tracking':
                     this.trackEditAction('trackingShowBtn' + this.item.id);
+                    this.setLastUpdateTime()
                     break;
                 default:
                     console.log(targetField);
@@ -295,6 +317,12 @@ export default {
                         'justify-content': 'center',
                     }
                 }
+                case 'Due Date': {
+                    return {
+                        'text-align': 'center',
+                        'justify-content': 'center',
+                    }
+                }
             }
         },
 
@@ -311,6 +339,9 @@ export default {
                 }
                 case 'Person': {
                     return 'flex'
+                }
+                case 'Due Date': {
+                    return 'flex items-center'
                 }
             }
         },
@@ -426,7 +457,33 @@ export default {
             }
         },
 
+        setDueObj(){
+            if (this.item['Due Date'] !== null){
+                this.dueObj.initialised = true;
+                let diff = new Date(this.item['Due Date']).getTime() - new Date().getTime();
+                let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+                let dayOrDays = Math.abs(diffDays) > 1 ? ' days ': ' day ';
+                if (diffDays < 0){
+                    this.dueObj.overdue = true;
+                    this.dueObj.msg = Math.abs(diffDays) + dayOrDays + 'overdue';
+                } else {
+                    this.dueObj.overdue = false;
+                    this.dueObj.msg = Math.abs(diffDays) + dayOrDays + 'left';
+                }
+                console.log(this.dueObj.msg);
+            } else {
+                this.dueObj.initialised = false;
+            }
+
+
+        },
+
         setCellValue($format) {
+            switch($format['name']){
+                case 'Due Date':
+                    this.setDueObj()
+                    break;
+            }
             switch ($format['type']) {
                 case 'text':
                 case 'url':
@@ -443,9 +500,9 @@ export default {
                 case 'tracking':
                     return this.parseTracking(this.item[$format.name]['total']);
                 case 'datetime':
-                    return parseStringDateTime(this.item[$format.name].$date.$numberLong);
+                    return parseStringDateTime(this.item[$format.name]);
                 case 'date':
-                    return parseStringDate(this.item[$format.name].$date.$numberLong);
+                    return parseStringDate(this.item[$format.name]);
             }
         },
 
@@ -533,15 +590,24 @@ export default {
             this.TogglePopup(trigger);
         },
 
-        itemAction(format, options) {
+        itemAction(format, options, event) {
             let key = format.name + '.' + options[0];
             if (!['mouseleave', 'mouseover'].includes(options[0])) {
                 console.log(key)
+            }
+            if (options[0] === 'change'){
+                this.setLastUpdateTime()
             }
             switch (key) {
                 case 'Note.mouseleave':
                 case 'Note.mouseover': {
                     this.textAreaHintAction(format, options, event)
+                    break;
+                }
+
+                case 'Due Date.mouseover':
+                case 'Due Date.mouseleave': {
+                    this.dueDateHintAction(format, options, event)
                     break;
                 }
 
@@ -594,6 +660,34 @@ export default {
                     'color': 'gray',
                 }
             }
+        },
+
+        dueDateHintAction(format, options, event) {
+            console.log('dueDateHintAction')
+            let key = format.name + '.' + options[0];
+            // console.log(key);
+            switch (key) {
+                case 'Due Date.mouseover': {
+                    // console.log('hint show')
+                    this.hintObj.x = event.clientX;
+                    this.hintObj.y = event.clientY;
+                    this.hintTriggers['mouseTrigger'] = true;
+                    this.hintObj.show = true;
+                    this.hintObj.content = this.dueObj.msg;
+                    this.hintObj.format = {
+                        'top': (this.hintObj.y - 40) + 'px',
+                        'left': (this.hintObj.x + 40) + 'px',
+                    }
+                    break;
+                }
+                case 'Due Date.mouseleave': {
+                    // console.log('hint close')
+                    this.hintTriggers['mouseTrigger'] = false;
+                    this.hintObj.show = false;
+                    break;
+                }
+            }
+
         },
 
         textAreaHintAction(format, options, event) {

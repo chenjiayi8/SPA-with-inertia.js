@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Jenssegers\Mongodb\Eloquent\Model as Eloquent;
+use MongoDB\BSON\UTCDateTime;
 
 class Management extends Eloquent
 {
@@ -14,5 +15,10 @@ class Management extends Eloquent
 
 
     protected $guarded = [];
+
+//    public function freshTimestamp()
+//    {
+//        return (new UTCDateTime())->__toString();
+//    }
 
 }

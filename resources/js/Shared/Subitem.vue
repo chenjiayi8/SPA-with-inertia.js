@@ -8,6 +8,24 @@
                         :style="{'background-color': group.color}"
                 ></button>
 
+                <div v-if="format.name === 'Person'" class="namesHolder flex items-center"
+                     :ref="'namesHolder'+this.subitem.id"
+                     v-on:mouseover="personAction('mouseover', $event)"
+                     v-on:mouseleave="personAction('mouseleave', $event)"
+                     v-on:change="itemAction(format, ['change', ''], $event)"
+                     :style="{'width': ((1+getNames().length)*30)+'px'}">
+                    <button v-show="this.personObj.buttonShown"
+                            :ref="'personsEdit'+this.subitem.id" class="circledButton"
+                            style="position: absolute; left: 0px; background-color: blue"
+                            v-on:click="personAction('click', $event)"
+
+                    >+
+                    </button>
+                    <div v-for="name in getNames()" class="circle" :style="name.format">
+                        {{ name.value }}
+                    </div>
+                </div>
+
                 <div>
                     <component
                         :is="setCellType(format)"
@@ -15,6 +33,7 @@
                         :ref="getRef(format)"
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
+                        v-on:change="itemAction(format, ['change', ''], $event)"
                         @click="() => itemAction(format,['click', 'buttonTrigger'])"
                         @ondblclick="() => itemAction(format,['dblclick', 'buttonTrigger'])"
                         @focus="itemAction(format, ['focus','in'])"
@@ -105,6 +124,10 @@ export default {
             targetField: '',
         });
 
+        const personObj = ref({
+            buttonShown: false,
+        });
+
         const hintTriggers = ref({
             mouseTrigger: false,
         });
@@ -143,6 +166,7 @@ export default {
             popupTriggers,
             TogglePopup,
             popupContent,
+            personObj,
             hintTriggers,
             ToggleHint,
             hintContent,
@@ -163,6 +187,10 @@ export default {
     },
 
     methods: {
+        setLastUpdateTime() {
+            this.subitem['LastUpdated'] = new Date().getTime();
+        },
+
         chooseStateMenu(targetField, index, trigger) {
             let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
             let ref = targetField.toLowerCase() + this.subitem.id;
@@ -170,6 +198,7 @@ export default {
             obj.innerHTML = this.group[itemField][index].name;
             this.subitem[targetField] = index;
             this.TogglePopup(trigger);
+            this.setLastUpdateTime()
         },
 
         setWidth($format) {
@@ -187,6 +216,12 @@ export default {
                         'align-items': 'center'
                     }
                 }
+                case 'Person': {
+                    return {
+                        'text-align': 'center',
+                        'justify-content': 'center',
+                    }
+                }
             }
         },
 
@@ -194,6 +229,9 @@ export default {
             switch (format.name) {
                 case 'Name': {
                     return 'flex justify-between space-x-4'
+                }
+                case 'Person': {
+                    return 'flex'
                 }
             }
         },
@@ -227,7 +265,7 @@ export default {
                         'overflow': 'hidden',
                         'color': 'white',
                         'font-size': 'small',
-                        'background-color': this.group.priorities[parseInt(this.item[$format.name])]['color'],
+                        'background-color': this.group.priorities[parseInt(this.subitem[$format.name])]['color'],
                     }
                 case 'longtext':
                     return {
@@ -280,6 +318,11 @@ export default {
                         'margin-left': '10px',
                         'margin-right': '10px',
                     }
+                case 'person':
+                    return {
+                        'vertical-align': 'top',
+                        'text-align': 'center',
+                    }
                 default: {
                     return {}
                 }
@@ -294,7 +337,7 @@ export default {
                 case 'text':
                     return 'textarea';
                 case 'person':
-                    return 'span';
+                    return 'div';
                 case 'url':
                     return 'a';
                 case 'status':
@@ -319,19 +362,52 @@ export default {
                 case 'text':
                     return this.subitem[$format.name];
                 case 'person':
-                    return this.subitem[$format.name];
+                    return '';
                 case 'url':
                     return this.subitem[$format.name];
                 case 'status':
-                    return this.group.statuses[parseInt(this.item[$format.name])]['name'];
+                    return this.group.statuses[parseInt(this.subitem[$format.name])]['name'];
                 case 'priority':
-                    return this.group.priorities[parseInt(this.item[$format.name])]['name'];
+                    return this.group.priorities[parseInt(this.subitem[$format.name])]['name'];
                 case 'longtext':
                     return this.subitem[$format.name];
                 case 'datetime':
-                    return parseStringDateTime(this.subitem[$format.name].$date.$numberLong);
+                    return parseStringDateTime(this.subitem[$format.name]);
                 case 'date':
-                    return parseStringDate(this.subitem[$format.name].$date.$numberLong);
+                    return parseStringDate(this.subitem[$format.name]);
+            }
+        },
+
+        getNames() {
+            let nameIds = this.subitem['Person']
+            let names = []
+            for (let i = 0; i < nameIds.length; i++) {
+                let name = Object()
+                name.value = this.workspace.users[nameIds[i]]['firstName'][0]
+                name.value += this.workspace.users[nameIds[i]]['lastName'][0]
+                name.format = {
+                    'position': 'absolute',
+                    'background': this.workspace.users[nameIds[i]]['color'],
+                    'left': (20 * (1 + i) + (i ===0 ? 2:0)) + 'px',
+                    'zIndex': i,
+                }
+                names.push(name)
+            }
+            return names
+        },
+
+        personAction(action, event) {
+            let ref = ''
+            switch (action) {
+                case 'mouseover':
+                    this.personObj.buttonShown = true;
+                    break;
+                case 'mouseleave':
+                    this.personObj.buttonShown = false;
+                    break;
+                case 'click':
+                    console.log('personAction clicked');
+                    break;
             }
         },
 
@@ -365,7 +441,12 @@ export default {
         itemAction(format, options, event) {
             let key = format.name + '.' + options[0];
             // console.log(key, event)
-
+            if (!['mouseleave', 'mouseover'].includes(options[0])) {
+                console.log(key)
+            }
+            if (options[0] === 'change') {
+                this.setLastUpdateTime();
+            }
             switch (key) {
                 case 'Note.mouseleave':
                 case 'Note.mouseover': {
@@ -500,6 +581,9 @@ export default {
             if ($format['type'] === 'longtext') {
                 return 'editLongText' + this.subitem.id
             }
+            if ($format['type'] === 'person') {
+                return 'person' + this.subitem.id
+            }
             if ($format['type'] === 'url') {
                 return 'url' + this.subitem.id
             }
@@ -517,4 +601,31 @@ export default {
 
 <style scoped>
 
+.circle {
+    width: 25px;
+    height: 25px;
+    border-radius: 12px;
+    font-size: 15px;
+    color: white;
+    line-height: 25px;
+    text-align: center;
+}
+
+.circledButton{
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    font-size: 20px;
+    color: white;
+    line-height: 20px;
+    text-align: center;
+}
+
+.namesHolder {
+    position: relative;
+    text-align: center;
+    height: 25px;
+    border-radius: 12px;
+    vertical-align: center;
+}
 </style>
