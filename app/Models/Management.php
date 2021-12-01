@@ -16,9 +16,4 @@ class Management extends Eloquent
 
     protected $guarded = [];
 
-//    public function freshTimestamp()
-//    {
-//        return (new UTCDateTime())->__toString();
-//    }
-
 }

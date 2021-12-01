@@ -50,8 +50,7 @@
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
                         v-on:change="itemAction(format, ['change', ''], $event)"
-                        @click="() => itemAction(format,['click', 'buttonTrigger'])"
-                        @ondblclick="() => itemAction(format,['dblclick', 'buttonTrigger'])"
+                        @click="itemAction(format,['click', 'buttonTrigger'], $event)"
                         @focus="itemAction(format, ['focus','in'])"
                         @blur="itemAction(format, ['focus','out'])"
                         :style="formatContent(format)"
@@ -75,12 +74,49 @@
                     </Popup>
 
                     <Hint
-                        v-if="hintTriggers.mouseTrigger"
-                        :ToggleHint="() => ToggleHint('mouseTrigger')"
+                        v-if="hintObj.mouseTrigger"
+                        class="flex align-left"
                         :style="hintObj.format">
-                        <div>
+                        {{ hintObj.content }}
+                    </Hint>
+
+                    <Hint
+                        v-if="dataPickerObj.mouseTrigger"
+                        :ToggleHint="() => ToggleDatePicker('mouseTrigger')"
+                        class="flex items-center"
+                        :style="dataPickerObj.format">
+                        <div class="bg-white rounded-xl">
                             <div>
-                                {{ hintObj.content }}
+                                <DatePicker v-model="dataPickerObj.date"
+                                            :value="dataPickerObj.date"
+                                            :ref="'calendar'+this.item.id"
+                                />
+                            </div>
+                            <div class="flex justify-between ml-5 mr-5 mt-2">
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="dueDatePickAction(format, ['lastYear'], $event)">
+                                    Last year
+                                </button>
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="dueDatePickAction(format, ['nextYear'], $event)">
+                                    Next year
+                                </button>
+                            </div>
+                            <div class="flex justify-between px-3 py-2">
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="dueDatePickAction(format, ['confirm'], $event)">
+                                    Confirm
+                                </button>
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="dueDatePickAction(format, ['today'], $event)">
+                                    Today
+                                </button>
+                                <button
+                                    class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                    @click="dueDatePickAction(format, ['cancel'], $event)"
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
                     </Hint>
@@ -123,7 +159,7 @@ import Popup from './Popup.vue'
 import Hint from "./Hint";
 import {now} from "lodash/date";
 import {round} from "lodash/math";
-
+import {DatePicker} from 'v-calendar';
 
 function toPercent($number, $float = 0) {
     return parseFloat($number).toFixed($float) + "%";
@@ -149,19 +185,43 @@ function parseStringDateTime($s) {
     return $d.toLocaleDateString('en-GB') + '\n ' + zeroPad($d.getHours(), 2) + ":" + zeroPad($d.getMinutes(), 2) + ":" + zeroPad($d.getSeconds(), 2);
 }
 
+function convertDateToMillis(date) {
+    return parseInt(date.getTime().toString());
+}
+
+function convertDateFromMillis(millis) {
+    return new Date(parseInt(millis.toString()));
+}
+
+function deepCopyDate(date) {
+    return convertDateFromMillis(convertDateToMillis(date));
+}
 
 export default {
     setup() {
+        const dataPickerObj = ref({
+            mouseTrigger: false,
+            x: 0,
+            y: 0,
+            date: null,
+            millis: 0,
+            format: {
+                'justify-content': 'center',
+                'background-color': 'white',
+            },
+        });
+
+        const ToggleDatePicker = (trigger) => {
+            dataPickerObj[trigger] = !dataPickerObj[trigger]
+        };
+
         const popupTriggers = ref({
             buttonTrigger: false,
             timedTrigger: false
         });
 
-        const hintTriggers = ref({
-            mouseTrigger: false,
-        });
-
         const hintObj = ref({
+            mouseTrigger: false,
             show: false,
             x: 0,
             y: 0,
@@ -211,8 +271,9 @@ export default {
         // }, 1000);
 
         return {
+            dataPickerObj,
+            ToggleDatePicker,
             popupTriggers,
-            hintTriggers,
             hintObj,
             TogglePopup,
             popupContent,
@@ -225,7 +286,7 @@ export default {
         }
     },
 
-    components: {Subitem, Popup, Hint},
+    components: {Subitem, Popup, Hint, DatePicker},
 
     props: {
         item: Object,
@@ -259,7 +320,7 @@ export default {
             return result; // Return is 1d 3h 4m 5s
         },
 
-        setLastUpdateTime(){
+        setLastUpdateTime() {
             this.item['LastUpdated'] = new Date().getTime();
         },
 
@@ -281,7 +342,7 @@ export default {
                     this.setLastUpdateTime()
                     break;
                 default:
-                    console.log(targetField);
+                    console.log('chooseStateMenu', 'unmatched', targetField);
             }
             this.TogglePopup(trigger);
         },
@@ -457,20 +518,19 @@ export default {
             }
         },
 
-        setDueObj(){
-            if (this.item['Due Date'] !== null){
+        setDueObj() {
+            if (this.item['Due Date'] !== null) {
                 this.dueObj.initialised = true;
                 let diff = new Date(this.item['Due Date']).getTime() - new Date().getTime();
                 let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-                let dayOrDays = Math.abs(diffDays) > 1 ? ' days ': ' day ';
-                if (diffDays < 0){
+                let dayOrDays = Math.abs(diffDays) > 1 ? ' days ' : ' day ';
+                if (diffDays <= 0) {
                     this.dueObj.overdue = true;
                     this.dueObj.msg = Math.abs(diffDays) + dayOrDays + 'overdue';
                 } else {
                     this.dueObj.overdue = false;
                     this.dueObj.msg = Math.abs(diffDays) + dayOrDays + 'left';
                 }
-                console.log(this.dueObj.msg);
             } else {
                 this.dueObj.initialised = false;
             }
@@ -479,7 +539,7 @@ export default {
         },
 
         setCellValue($format) {
-            switch($format['name']){
+            switch ($format['name']) {
                 case 'Due Date':
                     this.setDueObj()
                     break;
@@ -516,7 +576,7 @@ export default {
                 name.format = {
                     'position': 'absolute',
                     'background': this.workspace.users[nameIds[i]]['color'],
-                    'left': (20 * (1 + i) + (i ===0 ? 2:0)) + 'px',
+                    'left': (20 * (1 + i) + (i === 0 ? 2 : 0)) + 'px',
                     'zIndex': i,
                 }
                 names.push(name)
@@ -540,7 +600,7 @@ export default {
         },
 
         setPopupContent(format, trigger) {
-            console.log('setPopupContent', format, trigger);
+            // console.log('setPopupContent', format, trigger);
             const default_format = 'height: 20px; width: 100px; color: white;'
             switch (format.name) {
                 case 'Status': {
@@ -565,7 +625,7 @@ export default {
 
         stateAction(format, options) {
             let trigger = options[1]
-            console.log('stateAction', format, trigger);
+            // console.log('stateAction', format, trigger);
             const default_format = 'height: 20px; width: 100px; color: white;'
             switch (format.name) {
                 case 'Status': {
@@ -593,9 +653,9 @@ export default {
         itemAction(format, options, event) {
             let key = format.name + '.' + options[0];
             if (!['mouseleave', 'mouseover'].includes(options[0])) {
-                console.log(key)
+                console.log(key, event)
             }
-            if (options[0] === 'change'){
+            if (options[0] === 'change') {
                 this.setLastUpdateTime()
             }
             switch (key) {
@@ -608,6 +668,11 @@ export default {
                 case 'Due Date.mouseover':
                 case 'Due Date.mouseleave': {
                     this.dueDateHintAction(format, options, event)
+                    break;
+                }
+
+                case 'Due Date.click': {
+                    this.dueDateEditAction(format, options, event);
                     break;
                 }
 
@@ -663,7 +728,6 @@ export default {
         },
 
         dueDateHintAction(format, options, event) {
-            console.log('dueDateHintAction')
             let key = format.name + '.' + options[0];
             // console.log(key);
             switch (key) {
@@ -671,24 +735,76 @@ export default {
                     // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.hintTriggers['mouseTrigger'] = true;
+                    this.hintObj['mouseTrigger'] = true;
                     this.hintObj.show = true;
                     this.hintObj.content = this.dueObj.msg;
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
+                        'max-width': '150px',
+                        'max-height': '50px',
+                        'vertical-align': 'top',
+                        'text-align': 'left',
                     }
                     break;
                 }
                 case 'Due Date.mouseleave': {
                     // console.log('hint close')
-                    this.hintTriggers['mouseTrigger'] = false;
+                    this.hintObj['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
                 }
             }
 
         },
+
+        async dueDatePickAction(format, options, event) {
+            // console.log('dueDatePickAction', format, options);
+            const calendar = this.$refs['calendar' + this.item.id];
+            let tempDate;
+            switch (options[0]) {
+                case 'confirm':
+                    this.item['Due Date'] = this.dataPickerObj.date.getTime();
+                    this.dataPickerObj.mouseTrigger = false;
+                    this.setLastUpdateTime();
+                    break;
+                case 'cancel':
+                    this.dataPickerObj.mouseTrigger = false;
+                    break;
+                case 'nextYear':
+                    this.dataPickerObj.millis += 1000 * 60 * 60 * 24 * 365; // 1 year
+                    tempDate = new Date(this.dataPickerObj.millis);
+                    await calendar.move(tempDate);
+                    break;
+                case 'lastYear':
+                    this.dataPickerObj.millis -= 1000 * 60 * 60 * 24 * 365; // 1 year
+                    tempDate = new Date(this.dataPickerObj.millis);
+                    await calendar.move(tempDate);
+                    break;
+                case 'today':
+                    this.dataPickerObj.date = new Date();
+                    this.dataPickerObj.millis = parseInt(this.dataPickerObj.date.getTime());
+                    await calendar.move(this.dataPickerObj.date)
+                    break;
+            }
+
+        },
+
+        dueDateEditAction(format, options, event) {
+            // console.log('dueDateEditAction', format, options, event);
+            let dateNumber = this.item['Due Date'];
+            this.dataPickerObj.date = new Date(parseInt(dateNumber));
+            this.dataPickerObj.millis = parseInt(dateNumber);
+            this.dataPickerObj.x = event.clientX;
+            this.dataPickerObj.y = event.clientY;
+            this.dataPickerObj['mouseTrigger'] = true;
+            this.dataPickerObj.show = true;
+            this.dataPickerObj.format = {
+                'background-color': 'rgba(0, 0, 0, 0.1)',
+            };
+
+        },
+
 
         textAreaHintAction(format, options, event) {
             // console.log('textAreaHintAction')
@@ -703,18 +819,22 @@ export default {
                     // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.hintTriggers['mouseTrigger'] = true;
+                    this.hintObj['mouseTrigger'] = true;
                     this.hintObj.show = true;
                     this.hintObj.content = obj.innerHTML;
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'text-align': 'left',
                     }
                     break;
                 }
                 case 'Note.mouseleave': {
                     // console.log('hint close')
-                    this.hintTriggers['mouseTrigger'] = false;
+                    this.hintObj['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
                 }
@@ -723,9 +843,9 @@ export default {
         },
 
         textAreaZoomAction(format, options) {
-            console.log('textAreaZoomAction', format, options);
+            // console.log('textAreaZoomAction', format, options);
             let $ref = this.setRef(format)
-            console.log(format, options)
+            // console.log(format, options)
             let $obj = this.$refs[$ref]
             const $rect = $obj.getBoundingClientRect();
             if (!$obj.hasOwnProperty('rect_initial')) {
@@ -758,7 +878,7 @@ export default {
 
         trackPlayAction(ref) {
             // let exitCode = 0;
-            console.log('trackPlayAction', ref);
+            // console.log('trackPlayAction', ref);
             if (this.trackingObj.isTimeTracking === false) {
                 this.trackingObj.timer = new Date(now());
                 let exitCode = this.createTrackingRecord();
@@ -827,9 +947,9 @@ export default {
                 let index = this.item['Time Tracking']['records'].length
                 let record = this.item['Time Tracking']['records'][index - 1]
                 record['End time'] = new Date(now());
-                let startTime =  new Date(record['Start time'])
-                record['Work hour'] = round((record['End time']  - startTime) / 1000, 0);
-                this.item['Time Tracking']['records'][index-1] = record;
+                let startTime = new Date(record['Start time'])
+                record['Work hour'] = round((record['End time'] - startTime) / 1000, 0);
+                this.item['Time Tracking']['records'][index - 1] = record;
                 this.item['Time Tracking']['total'] += record['Work hour'];
             }
         },
@@ -882,7 +1002,7 @@ export default {
     text-align: center;
 }
 
-.circledButton{
+.circledButton {
     width: 20px;
     height: 20px;
     border-radius: 10px;

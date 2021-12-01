@@ -15,15 +15,16 @@ export default {
 <style lang="scss" scoped>
 .hint {
     position: fixed;
-    top: 100px;
-    left: 100px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 99;
     color: white;
     padding: 10px;
     background-color: gray;
     white-space: normal;
-    max-width: 400px;
-    font-size: small;
+    font-size: medium;
     vertical-align: top;
     text-align: left;
     overflow-wrap: normal;

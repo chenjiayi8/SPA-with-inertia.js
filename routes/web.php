@@ -18,8 +18,8 @@ use Inertia\Inertia;
 |
 */
 
-Route::get('/popup', function () {
-    return Inertia::render('Auth/TestPopup');
+Route::get('/calendar', function () {
+    return Inertia::render('Auth/TestVCalendar');
 });
 
 

@@ -44,6 +44,9 @@ let props = defineProps({
 
 // update table in server every N seconds
 let workspace = ref(props.workspace);
+// let objList = {
+//     dataPickerObj: false,
+// }
 let count = 0
 setInterval(() => {
     console.log("timeout management triggered");
