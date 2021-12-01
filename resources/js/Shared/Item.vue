@@ -24,6 +24,12 @@
                     <i class="fa-1x "
                        :class="dueObj.overdue ? 'fas fa-exclamation-circle text-red-500':'far fa-circle text-gray-400'"></i>
                 </div>
+                <button v-if="format.name === 'Due Date' && !dueObj.initialised" class="text-gray-300"
+                        :ref="'dueDateNew'+this.item.id"
+                        style="height: 100%; width: 100%"
+                        @click="itemAction(format,['click', 'dueDateNew', 'buttonTrigger'], $event)">
+                    Add
+                </button>
                 <div v-if="format.name === 'Person'" class="namesHolder flex items-center"
                      :ref="'namesHolder'+this.item.id"
                      v-on:mouseover="personAction('mouseover', $event)"
@@ -85,31 +91,36 @@
                         :ToggleHint="() => ToggleDatePicker('mouseTrigger')"
                         class="flex items-center"
                         :style="dataPickerObj.format">
-                        <div class="bg-white rounded-xl">
+                        <div class="bg-white rounded-xl px-2 py-2">
                             <div>
                                 <DatePicker v-model="dataPickerObj.date"
                                             :value="dataPickerObj.date"
                                             :ref="'calendar'+this.item.id"
+                                            is-expanded="true"
                                 />
                             </div>
-                            <div class="flex justify-between ml-5 mr-5 mt-2">
+                            <div class="flex justify-between mt-2">
                                 <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
                                         @click="dueDatePickAction(format, ['lastYear'], $event)">
                                     Last year
+                                </button>
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="dueDatePickAction(format, ['today'], $event)">
+                                    Today
                                 </button>
                                 <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
                                         @click="dueDatePickAction(format, ['nextYear'], $event)">
                                     Next year
                                 </button>
                             </div>
-                            <div class="flex justify-between px-3 py-2">
+                            <div class="flex justify-between mt-2">
                                 <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
                                         @click="dueDatePickAction(format, ['confirm'], $event)">
                                     Confirm
                                 </button>
                                 <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
-                                        @click="dueDatePickAction(format, ['today'], $event)">
-                                    Today
+                                        @click="dueDatePickAction(format, ['remove'], $event)">
+                                    Remove
                                 </button>
                                 <button
                                     class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
@@ -122,6 +133,26 @@
                     </Hint>
 
                 </div>
+            </div>
+        </td>
+    </tr>
+
+    <!--    last item: add row -->
+    <tr v-if="item.id === this.group.items.length-1" class="flex items-center mt-4">
+        <td style="height: 100%; width: 100%">
+            <div class="flex align-left">
+                <button
+                    class="flex-shrink-0"
+                    style="height: 50px; width: 20px;"
+                    :style="{'background-color': getAddColor(group.color)}"
+                />
+                <input
+                    placeholder="+ Add"
+                    :ref="'addItem'+group.id"
+                    v-on:change="addRowAction(['add'], $event)"
+                    style="line-height: 100%; width: 100%"
+                    class="ml-4"
+                />
             </div>
         </td>
     </tr>
@@ -172,6 +203,15 @@ function randomText() {
 function zeroPad(num, places) {
     let zero = places - num.toString().length + 1;
     return Array(+(zero > 0 && zero)).join("0") + num;
+}
+
+function hexToRGB(hex) {
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
 
 
@@ -265,11 +305,6 @@ export default {
             popupTriggers.value[trigger] = !popupTriggers.value[trigger]
         };
 
-        // setTimeout(() => {
-        //     console.log("item triggered");
-        //
-        // }, 1000);
-
         return {
             dataPickerObj,
             ToggleDatePicker,
@@ -295,6 +330,34 @@ export default {
     },
 
     methods: {
+
+        getAddColor() {
+            let rgb = hexToRGB(this.group.color);
+            return "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.5)";
+        },
+
+        addRowAction(options, event) {
+            console.log(options, event);
+            if (options[0] === 'add') {
+                let obj = this.$refs['addItem' + this.group.id]
+                let item = JSON.parse(JSON.stringify(this.group.items[0]));
+                console.log("value", obj.value)
+                item['Name'] = obj.value;
+                item['id'] = this.group.items.length;
+                item['Note'] = '';
+                item['Due Date'] = null;
+                item['created_at'] = new Date().getTime();
+                item['LastUpdated'] = new Date().getTime();
+                item['subitems'] = [item['subitems'][0]]; //keep one subitem
+                // item['Time Tracking'] = Object();
+                item['Time Tracking']['records'] = [];
+                item['Time Tracking']['total'] = 0;
+                console.log('add new item', item);
+                this.group.items.push(item)
+                obj.value = ''
+            }
+        },
+
         updateTimeTracking() {
             if (this.trackingObj.timer !== null) {
                 let ref = 'trackingShowBtn' + this.item.id;
@@ -539,6 +602,7 @@ export default {
         },
 
         setCellValue($format) {
+            if (this.item[$format.name] === null) return '';
             switch ($format['name']) {
                 case 'Due Date':
                     this.setDueObj()
@@ -769,6 +833,11 @@ export default {
                     this.setLastUpdateTime();
                     break;
                 case 'cancel':
+                    this.dataPickerObj.mouseTrigger = false;
+                    break;
+                case 'remove':
+                    this.item['Due Date'] = null;
+                    this.dueObj.initialised=false;
                     this.dataPickerObj.mouseTrigger = false;
                     break;
                 case 'nextYear':

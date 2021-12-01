@@ -5,6 +5,7 @@
             <h1 className="text-3xl">
                 Management
             </h1>
+            <button @click="addGroup" class="border rounded-2xl text-gray-500 ml-5 px-2 py-1">Add new group</button>
         </div>
     </div>
 
@@ -50,12 +51,13 @@ let workspace = ref(props.workspace);
 let count = 0
 setInterval(() => {
     console.log("timeout management triggered");
-    console.log(count++, hash(props.workspace));
-    Inertia.post("/admin", {workspace: workspace.value}, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
+    console.log("Will post but not now")
+    // console.log(count++, hash(props.workspace));
+    // Inertia.post("/admin", {workspace: workspace.value}, {
+    //     preserveState: true,
+    //     preserveScroll: true,
+    //     replace: true,
+    // });
 }, 10000);
 
 </script>
@@ -63,7 +65,21 @@ setInterval(() => {
 <script>
 export default {
     name: "Management",
+
+    methods: {
+        addGroup() {
+            console.log("addGroup", 'before', this.workspace.groups.length);
+            let group = JSON.parse(JSON.stringify(this.workspace.groups[0]));
+            group['name'] = 'New group'
+            group['items'] = [group['items'][0]];
+            group['items'][0]['subitems'] = [group['items'][0]['subitems'][0]];
+            group['id'] = this.workspace.groups.length;
+            this.workspace.groups.push(group);
+            console.log("addGroup", 'after', this.workspace.groups.length);
+        }
+    }
 }
+
 
 </script>
 
