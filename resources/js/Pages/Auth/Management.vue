@@ -48,17 +48,17 @@ let workspace = ref(props.workspace);
 // let objList = {
 //     dataPickerObj: false,
 // }
-let count = 0
-setInterval(() => {
-    console.log("timeout management triggered");
-    console.log("Will post but not now")
-    // console.log(count++, hash(props.workspace));
-    // Inertia.post("/admin", {workspace: workspace.value}, {
-    //     preserveState: true,
-    //     preserveScroll: true,
-    //     replace: true,
-    // });
-}, 10000);
+// let count = 0
+// setInterval(() => {
+//     console.log("timeout management triggered");
+//     console.log("Will post but not now")
+//     // console.log(count++, hash(props.workspace));
+//     // Inertia.post("/admin", {workspace: workspace.value}, {
+//     //     preserveState: true,
+//     //     preserveScroll: true,
+//     //     replace: true,
+//     // });
+// }, 10000);
 
 </script>
 

@@ -1,8 +1,6 @@
 <template>
     <div class="hint">
-        <div class="hint-inner">
-            <slot/>
-        </div>
+        <slot/>
     </div>
 </template>
 

@@ -30,6 +30,12 @@
                         @click="itemAction(format,['click', 'dueDateNew', 'buttonTrigger'], $event)">
                     Add
                 </button>
+                <button v-if="format.name === 'URL'" class="text-gray-300"
+                        :ref="'urlEdit'+this.item.id"
+                        style="height: 100%; width: 100%"
+                        @click="itemAction(format,['click', 'urlEdit', 'buttonTrigger'], $event)">
+                    Add
+                </button>
                 <div v-if="format.name === 'Person'" class="namesHolder flex items-center"
                      :ref="'namesHolder'+this.item.id"
                      v-on:mouseover="personAction('mouseover', $event)"
@@ -38,7 +44,7 @@
                      :style="{'width': ((1+getNames().length)*30)+'px'}">
                     <button v-show="this.personObj.buttonShown"
                             :ref="'personsEdit'+this.item.id" class="circledButton"
-                            style="position: absolute; left: 0px; background-color: blue"
+                            style="position: absolute; left: 0; background-color: blue"
                             v-on:click="personAction('click', $event)"
 
                     >+
@@ -70,18 +76,19 @@
                         <h2>{{ popupContent.name }}</h2>
                         <div>
                             <div v-for="(choice, index) in popupContent.choices">
-                                <button :style="choice.format"
-                                        @click="chooseStateMenu(popupContent.targetField, index, 'buttonTrigger')">
+                                <button
+                                    :style="choice.format"
+                                    @click="chooseStateMenu(popupContent.targetField, index, 'buttonTrigger')">
                                     {{ choice.name }}
                                 </button>
                             </div>
 
                         </div>
                     </Popup>
-
+                    <!--                        class="flex align-left"-->
                     <Hint
                         v-if="hintObj.mouseTrigger"
-                        class="flex align-left"
+
                         :style="hintObj.format">
                         {{ hintObj.content }}
                     </Hint>
@@ -96,7 +103,6 @@
                                 <DatePicker v-model="dataPickerObj.date"
                                             :value="dataPickerObj.date"
                                             :ref="'calendar'+this.item.id"
-                                            is-expanded="true"
                                 />
                             </div>
                             <div class="flex justify-between mt-2">
@@ -305,6 +311,8 @@ export default {
             popupTriggers.value[trigger] = !popupTriggers.value[trigger]
         };
 
+        const defaultStateFormat = 'height: 20px; width: 100px; color: white; '
+
         return {
             dataPickerObj,
             ToggleDatePicker,
@@ -318,6 +326,7 @@ export default {
             subItemContent,
             textAreaZoomed,
             trackingObj,
+            defaultStateFormat,
         }
     },
 
@@ -346,6 +355,8 @@ export default {
                 item['id'] = this.group.items.length;
                 item['Note'] = '';
                 item['Due Date'] = null;
+                item['Status'] = null;
+                item['Priority'] = null;
                 item['created_at'] = new Date().getTime();
                 item['LastUpdated'] = new Date().getTime();
                 item['subitems'] = [item['subitems'][0]]; //keep one subitem
@@ -396,8 +407,11 @@ export default {
                     itemField = targetField === 'Status' ? 'statuses' : 'priorities';
                     ref = targetField.toLowerCase() + this.item.id;
                     let obj = this.$refs[ref];
-                    obj.innerHTML = this.group[itemField][index].name;
-                    this.item[targetField] = index;
+                    if (index < this.group[itemField].length) {
+                        this.item[targetField] = index;
+                    } else {
+                        this.item[targetField] = null;
+                    }
                     this.setLastUpdateTime()
                     break;
                 case 'Time Tracking':
@@ -420,33 +434,18 @@ export default {
 
         setPrefixStyle(format) {
             switch (format.name) {
-                case 'Name': {
+                case 'Name':
+                case 'Time Tracking':
+                case 'subitems':
                     return {
                         'align-items': 'center'
                     }
-                }
-                case 'Time Tracking': {
-                    return {
-                        'align-items': 'center'
-                    }
-                }
-                case 'subitems': {
-                    return {
-                        'align-items': 'center'
-                    }
-                }
-                case 'Person': {
+                case 'Person':
+                case 'Due Date':
                     return {
                         'text-align': 'center',
                         'justify-content': 'center',
                     }
-                }
-                case 'Due Date': {
-                    return {
-                        'text-align': 'center',
-                        'justify-content': 'center',
-                    }
-                }
             }
         },
 
@@ -479,28 +478,7 @@ export default {
                         'text-align': 'center',
                         'white-space': 'normal',
                     };
-                case 'status':
-                    return {
-                        'width': toPercent($format['width']),
-                        'vertical-align': 'top',
-                        'text-align': 'center',
-                        'white-space': 'nowrap',
-                        'overflow': 'hidden',
-                        'color': 'white',
-                        'font-size': 'small',
-                        'background-color': this.group.statuses[parseInt(this.item[$format.name])]['color'],
-                    }
-                case 'priority':
-                    return {
-                        'width': toPercent($format['width']),
-                        'vertical-align': 'top',
-                        'text-align': 'center',
-                        'white-space': 'nowrap',
-                        'overflow': 'hidden',
-                        'color': 'white',
-                        'font-size': 'small',
-                        'background-color': this.group.priorities[parseInt(this.item[$format.name])]['color'],
-                    }
+
                 case 'longtext':
                     return {
                         'width': toPercent($format['width']),
@@ -546,6 +524,30 @@ export default {
                     return {
                         'vertical-align': 'top',
                         'text-align': 'center',
+                    }
+                case 'status':
+                    return {
+                        'vertical-align': 'center',
+                        'height': '100%',
+                        'width': '100%',
+                        'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'color': 'white',
+                        'font-size': 'small',
+                        'background-color': this.item[$format.name] !== null ? this.group.statuses[parseInt(this.item[$format.name])]['color'] : 'rgb(197, 197, 197)',
+                    }
+                case 'priority':
+                    return {
+                        'vertical-align': 'center',
+                        'height': '100%',
+                        'width': '100%',
+                        'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'color': 'white',
+                        'font-size': 'small',
+                        'background-color': this.item[$format.name] !== null ? this.group.priorities[parseInt(this.item[$format.name])]['color'] : 'rgb(197, 197, 197)',
                     }
                 default: {
                     return {}
@@ -602,7 +604,7 @@ export default {
         },
 
         setCellValue($format) {
-            if (this.item[$format.name] === null) return '';
+            if (this.item[$format.name] === null) return '&ZeroWidthSpace;';
             switch ($format['name']) {
                 case 'Due Date':
                     this.setDueObj()
@@ -665,19 +667,18 @@ export default {
 
         setPopupContent(format, trigger) {
             // console.log('setPopupContent', format, trigger);
-            const default_format = 'height: 20px; width: 100px; color: white;'
             switch (format.name) {
                 case 'Status': {
                     this.popupContent.name = 'Status';
                     let choices = this.group['statuses'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     this.popupContent.choices = choices;
                     break;
                 }
                 case 'Priority':
                     this.popupContent.name = 'Priority'
                     let choices = this.group['priorities'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     this.popupContent.choices = choices;
                     break;
                 default: {
@@ -689,21 +690,27 @@ export default {
 
         stateAction(format, options) {
             let trigger = options[1]
-            // console.log('stateAction', format, trigger);
-            const default_format = 'height: 20px; width: 100px; color: white;'
+            let defaultState = Object()
+            defaultState['format'] = this.defaultStateFormat + 'background-color: rgb(197, 197, 197)';
+            defaultState['name'] = 'None'
+
+
             switch (format.name) {
                 case 'Status': {
+                    console.log('stateAction123', format.name, options);
                     this.popupContent.name = 'Status';
-                    let choices = this.group['statuses'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    let choices = JSON.parse(JSON.stringify(this.group['statuses']));
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
+                    choices.push(defaultState);
                     this.popupContent.choices = choices;
                     this.popupContent.targetField = 'Status';
                     break;
                 }
                 case 'Priority':
                     this.popupContent.name = 'Priority'
-                    let choices = this.group['priorities'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    let choices = JSON.parse(JSON.stringify(this.group['priorities']));
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
+                    choices.push(defaultState);
                     this.popupContent.choices = choices;
                     this.popupContent.targetField = 'Priority';
                     break;
@@ -805,7 +812,9 @@ export default {
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
-                        'max-width': '150px',
+                        'width': '100%',
+                        'height': '100%',
+                        'max-width': '200px',
                         'max-height': '50px',
                         'vertical-align': 'top',
                         'text-align': 'left',
@@ -837,7 +846,7 @@ export default {
                     break;
                 case 'remove':
                     this.item['Due Date'] = null;
-                    this.dueObj.initialised=false;
+                    this.dueObj.initialised = false;
                     this.dataPickerObj.mouseTrigger = false;
                     break;
                 case 'nextYear':
@@ -894,6 +903,8 @@ export default {
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
+                        'width': '100%',
+                        'height': '100%',
                         'max-width': '400px',
                         'max-height': '100px',
                         'vertical-align': 'top',
@@ -1003,7 +1014,6 @@ export default {
                 } else {
                     this.item['Time Tracking']['records'].push(createRecord(index));
                 }
-
             } else {//very first record
                 this.item['Time Tracking']['records'].push(createRecord());
             }
@@ -1088,4 +1098,5 @@ export default {
     border-radius: 12px;
     vertical-align: center;
 }
+
 </style>

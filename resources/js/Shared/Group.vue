@@ -15,7 +15,6 @@
                                     v-on:mouseover="groupNameAction(format, ['mouseover', ''], $event)"
                                     v-on:mouseleave="groupNameAction(format, ['mouseleave', ''], $event)"
                                     @click="groupNameAction(format,['click', 'buttonTrigger'], $event)"
-
                                 />
                             </th>
 

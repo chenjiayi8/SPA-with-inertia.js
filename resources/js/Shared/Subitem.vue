@@ -16,7 +16,7 @@
                      :style="{'width': ((1+getNames().length)*30)+'px'}">
                     <button v-show="this.personObj.buttonShown"
                             :ref="'personsEdit'+this.subitem.id" class="circledButton"
-                            style="position: absolute; left: 0px; background-color: blue"
+                            style="position: absolute; left: 0; background-color: blue"
                             v-on:click="personAction('click', $event)"
 
                     >+
@@ -34,8 +34,7 @@
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
                         v-on:change="itemAction(format, ['change', ''], $event)"
-                        @click="() => itemAction(format,['click', 'buttonTrigger'])"
-                        @ondblclick="() => itemAction(format,['dblclick', 'buttonTrigger'])"
+                        @click="itemAction(format,['click', 'buttonTrigger'])"
                         @focus="itemAction(format, ['focus','in'])"
                         @blur="itemAction(format, ['focus','out'])"
                         :style="formatContent(format)"
@@ -161,6 +160,8 @@ export default {
             hintTriggers.value[trigger] = !hintTriggers.value[trigger]
         };
 
+        const defaultStateFormat = 'height: 20px; width: 100px; color: white; '
+
         return {
             Popup,
             popupTriggers,
@@ -174,6 +175,7 @@ export default {
             clickTimer,
             textAreaZoomed,
             hintObj,
+            defaultStateFormat,
         }
     },
     components: {Popup, Hint},
@@ -195,8 +197,11 @@ export default {
             let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
             let ref = targetField.toLowerCase() + this.subitem.id;
             let obj = this.$refs[ref];
-            obj.innerHTML = this.group[itemField][index].name;
-            this.subitem[targetField] = index;
+            if (index < this.group[itemField].length) {
+                this.subitem[targetField] = index;
+            } else {
+                this.subitem[targetField] = null;
+            }
             this.TogglePopup(trigger);
             this.setLastUpdateTime()
         },
@@ -245,28 +250,6 @@ export default {
                         'text-align': 'center',
                         'white-space': 'normal',
                     };
-                case 'status':
-                    return {
-                        'width': toPercent($format['width']),
-                        'vertical-align': 'top',
-                        'text-align': 'center',
-                        'white-space': 'nowrap',
-                        'overflow': 'hidden',
-                        'color': 'white',
-                        'font-size': 'small',
-                        'background-color': this.group.statuses[parseInt(this.subitem[$format.name])]['color'],
-                    }
-                case 'priority':
-                    return {
-                        'width': toPercent($format['width']),
-                        'vertical-align': 'top',
-                        'text-align': 'center',
-                        'white-space': 'nowrap',
-                        'overflow': 'hidden',
-                        'color': 'white',
-                        'font-size': 'small',
-                        'background-color': this.group.priorities[parseInt(this.subitem[$format.name])]['color'],
-                    }
                 case 'longtext':
                     return {
                         'width': toPercent($format['width']),
@@ -309,10 +292,6 @@ export default {
         formatContent($format) {
             switch ($format.type) {
                 case 'longtext':
-                    return {
-                        'margin-left': '10px',
-                        'margin-right': '10px',
-                    }
                 case 'url':
                     return {
                         'margin-left': '10px',
@@ -322,6 +301,30 @@ export default {
                     return {
                         'vertical-align': 'top',
                         'text-align': 'center',
+                    }
+                case 'status':
+                    return {
+                        'vertical-align': 'center',
+                        'height': '100%',
+                        'width': '100%',
+                        'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'color': 'white',
+                        'font-size': 'small',
+                        'background-color': this.subitem[$format.name] !== null ? this.group.statuses[parseInt(this.subitem[$format.name])]['color'] : 'rgb(197, 197, 197)',
+                    }
+                case 'priority':
+                    return {
+                        'vertical-align': 'center',
+                        'height': '100%',
+                        'width': '100%',
+                        'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'color': 'white',
+                        'font-size': 'small',
+                        'background-color': this.subitem[$format.name] !== null ? this.group.priorities[parseInt(this.subitem[$format.name])]['color'] : 'rgb(197, 197, 197)',
                     }
                 default: {
                     return {}
@@ -358,6 +361,7 @@ export default {
         },
 
         setCellValue($format) {
+            if (this.subitem[$format.name] === null) return '&ZeroWidthSpace;';
             switch ($format['type']) {
                 case 'text':
                     return this.subitem[$format.name];
@@ -388,7 +392,7 @@ export default {
                 name.format = {
                     'position': 'absolute',
                     'background': this.workspace.users[nameIds[i]]['color'],
-                    'left': (20 * (1 + i) + (i ===0 ? 2:0)) + 'px',
+                    'left': (20 * (1 + i) + (i === 0 ? 2 : 0)) + 'px',
                     'zIndex': i,
                 }
                 names.push(name)
@@ -413,21 +417,25 @@ export default {
 
         stateAction(format, options) {
             let trigger = options[1]
-            console.log('stateAction', format, trigger);
-            const default_format = 'height: 20px; width: 100px; color: white;'
+            let defaultState = Object()
+            defaultState['format'] = this.defaultStateFormat + 'background-color: rgb(197, 197, 197)';
+            defaultState['name'] = 'None'
             switch (format.name) {
                 case 'Status': {
+                    console.log('stateAction123', format.name, options);
                     this.popupContent.name = 'Status';
-                    let choices = this.group['statuses'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    let choices = JSON.parse(JSON.stringify(this.group['statuses']));
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
+                    choices.push(defaultState);
                     this.popupContent.choices = choices;
                     this.popupContent.targetField = 'Status';
                     break;
                 }
                 case 'Priority':
                     this.popupContent.name = 'Priority'
-                    let choices = this.group['priorities'];
-                    choices.forEach(e => e.format = default_format + 'background-color:' + e.color);
+                    let choices = JSON.parse(JSON.stringify(this.group['priorities']));
+                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
+                    choices.push(defaultState);
                     this.popupContent.choices = choices;
                     this.popupContent.targetField = 'Priority';
                     break;
@@ -520,6 +528,10 @@ export default {
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'text-align': 'left',
                     }
                     break;
                 }
@@ -611,7 +623,7 @@ export default {
     text-align: center;
 }
 
-.circledButton{
+.circledButton {
     width: 20px;
     height: 20px;
     border-radius: 10px;
