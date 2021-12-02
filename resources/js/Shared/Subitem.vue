@@ -1,5 +1,5 @@
 <template>
-    <tr class="flex items-center mt-4">
+    <tr class="flex items-center mt-4 space-x-2">
         <td v-for="format in item.formats" :style="formatCell(format)">
             <div :class="setPrefixClass(format)" :style="setPrefixStyle(format)">
                 <button v-if="format.name === 'Name'"
@@ -26,6 +26,15 @@
                     </div>
                 </div>
 
+                <button v-show="format.name === 'URL' && urlObj.buttonShown"
+                        class="text-gray-500 px-2 align-middle"
+                        style="height: 20px; width: 50px;"
+                        :ref="'urlEditBtn'+this.subitem.id"
+                        v-on:click="urlEditAction('urlEdit')"
+                >Edit
+                </button>
+
+
                 <div>
                     <component
                         :is="setCellType(format)"
@@ -41,20 +50,62 @@
                         class="px-1"
                     />
 
+                    <!--   menu-->
                     <Popup
-                        v-if="popupTriggers.buttonTrigger"
-                        :TogglePopup="() => TogglePopup('buttonTrigger')">
-                        <h2>{{ popupContent.name }}</h2>
+                        v-if="popupMenuTriggers.buttonTrigger"
+                        :TogglePopupMenu="() => TogglePopupMenu('buttonTrigger')">
+                        <h2>{{ popupMenuContent.name }}</h2>
                         <div>
-                            <div v-for="(choice, index) in popupContent.choices">
+                            <div v-for="(choice, index) in popupMenuContent.choices">
                                 <button :style="choice.format"
-                                        @click="chooseStateMenu(popupContent.targetField, index, 'buttonTrigger')">
+                                        @click="chooseStateMenu(popupMenuContent.targetField, index, 'buttonTrigger')">
                                     {{ choice.name }}
                                 </button>
                             </div>
 
                         </div>
                     </Popup>
+
+                    <!--   inputs -->
+                    <Hint
+                        v-if="popupInputObj.show"
+                        :ToggleHint="() => popupInputObj.show = !popupInputObj.show"
+                        class="flex items-center"
+                        :style="popupInputObj.format">
+                        <div class="bg-white rounded-xl px-2 py-2">
+                            <div>
+                                <div class="flex content-center">
+                                <textarea class="text-gray-500 m-2 p-2"
+                                          :ref="'urlEditArea'+this.subitem.id"
+                                          :value="popupInputObj.value"
+                                          style="width : 400px">
+                                </textarea>
+                                </div>
+                                <div v-if="popupInputObj.error.length !==0" class="text-center text-red-300">
+                                    {{ popupInputObj.error }}
+                                </div>
+                            </div>
+                            <div class="flex justify-between mt-2">
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="getPopupInput('confirm')"
+                                >
+                                    Confirm
+                                </button>
+                                <button class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                        @click="getPopupInput('remove')"
+                                >
+                                    Remove
+                                </button>
+                                <button
+                                    class="border rounded-2xl px-2 bg-blue-200 text-gray-500 font-medium"
+                                    @click="getPopupInput('cancel')"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </Hint>
+
 
                     <Hint
                         v-if="hintTriggers.mouseTrigger"
@@ -70,6 +121,27 @@
             </div>
         </td>
     </tr>
+
+    <!--    last item: add row -->
+    <tr v-if="subitem.id === this.item.subitems.length-1" class="flex items-center mt-4">
+        <td style="height: 100%; width: 100%">
+            <div class="flex align-left">
+                <button
+                    class="flex-shrink-0"
+                    style="height: 50px; width: 20px;"
+                    :style="{'background-color': getAddColor(group.color)}"
+                />
+                <input
+                    placeholder="+ Add"
+                    :ref="'addSubItem'+item.id"
+                    v-on:change="addRowAction(['add'], $event)"
+                    style="line-height: 100%; width: 100%"
+                    class="ml-4"
+                />
+            </div>
+        </td>
+    </tr>
+
 </template>
 
 <script>
@@ -99,6 +171,25 @@ function zeroPad(num, places) {
     return Array(+(zero > 0 && zero)).join("0") + num;
 }
 
+function hexToRGB(hex) {
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+function isValidUrl(url) {
+    try {
+        new URL(url);
+    } catch (e) {
+        console.error(e);
+        return false;
+    }
+    return true;
+}
+
 function parseStringDate(str) {
     let $d = new Date(parseInt(str));
     return $d.toLocaleDateString('en-GB');
@@ -111,20 +202,38 @@ function parseStringDateTime(str) {
 
 export default {
     setup() {
-        const popupTriggers = ref({
+        const popupMenuTriggers = ref({
             buttonTrigger: false,
             timedTrigger: false
         });
 
-        const popupContent = ref({
+        const popupMenuContent = ref({
             name: '',
             choices: Array,
             format: '',
             targetField: '',
         });
 
+        const TogglePopupMenu = (trigger) => {
+            popupMenuTriggers.value[trigger] = !popupMenuTriggers.value[trigger]
+        };
+
+        const popupInputObj = ref({
+            show: false,
+            name: '',
+            format: '',
+            targetField: '',
+            error: '',
+            value: '',
+        });
+
         const personObj = ref({
             buttonShown: false,
+        });
+
+        const urlObj = ref({
+            buttonShown: true,
+            content: '',
         });
 
         const hintTriggers = ref({
@@ -152,9 +261,6 @@ export default {
             format: {},
         })
 
-        const TogglePopup = (trigger) => {
-            popupTriggers.value[trigger] = !popupTriggers.value[trigger]
-        };
 
         const ToggleHint = (trigger) => {
             hintTriggers.value[trigger] = !hintTriggers.value[trigger]
@@ -164,10 +270,12 @@ export default {
 
         return {
             Popup,
-            popupTriggers,
-            TogglePopup,
-            popupContent,
+            popupMenuTriggers,
+            popupMenuContent,
+            TogglePopupMenu,
+            popupInputObj,
             personObj,
+            urlObj,
             hintTriggers,
             ToggleHint,
             hintContent,
@@ -189,6 +297,30 @@ export default {
     },
 
     methods: {
+        getAddColor() {
+            let rgb = hexToRGB(this.group.color);
+            return "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.5)";
+        },
+
+        addRowAction(options, event) {
+            console.log(options, event);
+            if (options[0] === 'add') {
+                let obj = this.$refs['addSubItem' + this.item.id]
+                let subItem = JSON.parse(JSON.stringify(this.item.subitems[0]));
+                console.log("value", obj.value)
+                subItem['Name'] = obj.value;
+                subItem['id'] = this.item.subitems.length;
+                subItem['Note'] = '';
+                subItem['URL'] = '';
+                subItem['Status'] = null;
+                subItem['created_at'] = new Date().getTime();
+                subItem['LastUpdated'] = new Date().getTime();
+                console.log('add new subItem', subItem);
+                this.item.subitems.push(subItem)
+                obj.value = ''
+            }
+        },
+
         setLastUpdateTime() {
             this.subitem['LastUpdated'] = new Date().getTime();
         },
@@ -202,8 +334,30 @@ export default {
             } else {
                 this.subitem[targetField] = null;
             }
-            this.TogglePopup(trigger);
+            this.TogglePopupMenu(trigger);
             this.setLastUpdateTime()
+        },
+
+        getPopupInput(action) {
+            switch (action) {
+                case 'confirm':
+                    let obj = this.$refs['urlEditArea' + this.subitem.id]
+                    if (isValidUrl(obj.value)) {
+                        this.subitem[this.popupInputObj.targetField] = obj.value;
+                        this.popupInputObj.show = false;
+                        this.setLastUpdateTime();
+                    } else {
+                        this.popupInputObj.error = 'Invalided URL';
+                    }
+                    break;
+                case 'cancel':
+                    this.popupInputObj.show = false;
+                    break;
+                case 'remove':
+                    this.subitem[this.popupInputObj.targetField] = null;
+                    this.popupInputObj.show = false;
+                    break;
+            }
         },
 
         setWidth($format) {
@@ -223,7 +377,8 @@ export default {
                 }
                 case 'Person': {
                     return {
-                        'text-align': 'center',
+                        'display': 'flex',
+                        'text-align': 'left',
                         'justify-content': 'center',
                     }
                 }
@@ -237,6 +392,11 @@ export default {
                 }
                 case 'Person': {
                     return 'flex'
+                }
+
+                case 'URL': {
+                    return 'flex justify-start items-center mx-2 truncate'
+
                 }
             }
         },
@@ -268,8 +428,6 @@ export default {
                         'white-space': 'nowrap',
                         'overflow': 'hidden',
                         'color': 'blue',
-                        'margin-right': '20px',
-
                         // 'white-space': 'normal',
                         // 'overflow-wrap': 'normal',
 
@@ -292,10 +450,23 @@ export default {
         formatContent($format) {
             switch ($format.type) {
                 case 'longtext':
-                case 'url':
                     return {
                         'margin-left': '10px',
                         'margin-right': '10px',
+                        'width': '100%',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        // 'width': 'max-content',
+                    }
+                case 'url':
+                    return {
+                        'text-align': 'left',
+                        // 'overflow': 'hidden',
+                        // 'width': '100%',
                     }
                 case 'person':
                     return {
@@ -400,7 +571,16 @@ export default {
             return names
         },
 
-        personAction(action, event) {
+        urlEditAction() {
+            this.popupInputObj.name = 'URL';
+            this.popupInputObj.value = this.subitem['URL'];
+            this.popupInputObj.show = true;
+            this.popupInputObj.targetField = 'URL';
+            this.popupInputObj.format = 'background-color:rgba(0, 0, 0, 0.1)';
+            this.popupInputObj.error = '';
+        },
+
+        personAction(action) {
             let ref = ''
             switch (action) {
                 case 'mouseover':
@@ -423,27 +603,27 @@ export default {
             switch (format.name) {
                 case 'Status': {
                     console.log('stateAction123', format.name, options);
-                    this.popupContent.name = 'Status';
+                    this.popupMenuContent.name = 'Status';
                     let choices = JSON.parse(JSON.stringify(this.group['statuses']));
                     choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     choices.push(defaultState);
-                    this.popupContent.choices = choices;
-                    this.popupContent.targetField = 'Status';
+                    this.popupMenuContent.choices = choices;
+                    this.popupMenuContent.targetField = 'Status';
                     break;
                 }
                 case 'Priority':
-                    this.popupContent.name = 'Priority'
+                    this.popupMenuContent.name = 'Priority'
                     let choices = JSON.parse(JSON.stringify(this.group['priorities']));
                     choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     choices.push(defaultState);
-                    this.popupContent.choices = choices;
-                    this.popupContent.targetField = 'Priority';
+                    this.popupMenuContent.choices = choices;
+                    this.popupMenuContent.targetField = 'Priority';
                     break;
                 default: {
                     console.log('stateAction: unmatched choice')
                 }
             }
-            this.TogglePopup(trigger);
+            this.TogglePopupMenu(trigger);
         },
 
         itemAction(format, options, event) {
@@ -531,7 +711,10 @@ export default {
                         'max-width': '400px',
                         'max-height': '100px',
                         'vertical-align': 'top',
-                        'text-align': 'left',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        'width': 'max-content',
                     }
                     break;
                 }
@@ -561,6 +744,8 @@ export default {
                 if ($ref.toLowerCase().includes('longtext')) {
                     $obj.rows = 10;
                     $obj.cols = 40;
+                    // $obj.style.height= '200px';
+                    $obj.style.width = '400px';
                 } else {
                     $obj.rows = 2;
                     $obj.cols = 20;

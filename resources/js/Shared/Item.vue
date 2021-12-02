@@ -1,5 +1,5 @@
 <template>
-    <tr class="flex items-center mt-4">
+    <tr class="flex items-center mt-4 space-x-2">
         <td v-for="format in group.formats" :style="formatCell(format)">
             <div :class="setPrefixClass(format)" :style="setPrefixStyle(format)">
                 <button v-if="format.name === 'Name'"
@@ -85,12 +85,10 @@
 
                         </div>
                     </Popup>
-                    <!--                        class="flex align-left"-->
                     <Hint
                         v-if="hintObj.mouseTrigger"
-
                         :style="hintObj.format">
-                        {{ hintObj.content }}
+                            {{ hintObj.content }}
                     </Hint>
 
                     <Hint
@@ -163,7 +161,7 @@
         </td>
     </tr>
 
-    <div v-if='subItemOpen' class="mt-5 ml-5 mb-10 ">
+    <div v-if='subItemOpen' class="mt-5 ml-5 mb-10" style="width:100%">
         <table class="divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr class="flex items-center">
@@ -512,8 +510,16 @@ export default {
             switch ($format.type) {
                 case 'longtext':
                     return {
-                        'margin-left': '10px',
-                        'margin-right': '10px',
+                        // 'margin-left': '10px',
+                        // 'margin-right': '10px',
+                        'width' : '100%',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        // 'width': 'max-content',
                     }
                 case 'subitem':
                     return {
@@ -899,16 +905,17 @@ export default {
                     this.hintObj.y = event.clientY;
                     this.hintObj['mouseTrigger'] = true;
                     this.hintObj.show = true;
-                    this.hintObj.content = obj.innerHTML;
+                    this.hintObj.content = obj.value;
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
-                        'width': '100%',
-                        'height': '100%',
                         'max-width': '400px',
                         'max-height': '100px',
                         'vertical-align': 'top',
-                        'text-align': 'left',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        'width': 'max-content',
                     }
                     break;
                 }
