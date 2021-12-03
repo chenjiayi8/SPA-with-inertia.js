@@ -31,7 +31,7 @@
 
 <script setup>
 import {ref} from 'vue';
-import Popup from '../../Shared/Popup.vue'
+import Popup from '../Backup/Popup.vue'
 
 let props = defineProps({
     menu: Object,

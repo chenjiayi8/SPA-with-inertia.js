@@ -69,12 +69,15 @@
                         class="px-1"
                     />
 
+                    <!--popup choice-->
                     <Popup
-                        v-if="popupTriggers.buttonTrigger"
-                        :TogglePopup="() => TogglePopup('buttonTrigger')"
-                    >
-                        <h2>{{ popupContent.name }}</h2>
-                        <div>
+                        v-if="popupContent.show"
+                        :TogglePopup="() => popupContent.show = !popupContent.show"
+                        :style="popupContent.format">
+                        <div class="flex items-center flex-col px-4 py-6 bg-gray-500 ">
+                            <div>
+                                <h2>{{ popupContent.name }}</h2>
+                            </div>
                             <div v-for="(choice, index) in popupContent.choices">
                                 <button
                                     :style="choice.format"
@@ -82,18 +85,24 @@
                                     {{ choice.name }}
                                 </button>
                             </div>
+                            <div>
+                                <button class="popup-close" @click="popupContent.show=false">
+                                    Cancel
+                                </button>
+                            </div>
 
                         </div>
                     </Popup>
-                    <Hint
-                        v-if="hintObj.mouseTrigger"
-                        :style="hintObj.format">
-                            {{ hintObj.content }}
-                    </Hint>
 
-                    <Hint
-                        v-if="dataPickerObj.mouseTrigger"
-                        :ToggleHint="() => ToggleDatePicker('mouseTrigger')"
+                    <Popup
+                        v-if="hintObj.show"
+                        :style="hintObj.format">
+                        {{ hintObj.content }}
+                    </Popup>
+
+                    <Popup
+                        v-if="dataPickerObj.show"
+                        :TogglePopup="() => dataPickerObj.show = !dataPickerObj.show"
                         class="flex items-center"
                         :style="dataPickerObj.format">
                         <div class="bg-white rounded-xl px-2 py-2">
@@ -134,7 +143,7 @@
                                 </button>
                             </div>
                         </div>
-                    </Hint>
+                    </Popup>
 
                 </div>
             </div>
@@ -190,8 +199,7 @@
 <script>
 import Subitem from "./Subitem";
 import {ref} from 'vue';
-import Popup from './Popup.vue'
-import Hint from "./Hint";
+import Popup from "./Popup";
 import {now} from "lodash/date";
 import {round} from "lodash/math";
 import {DatePicker} from 'v-calendar';
@@ -244,7 +252,7 @@ function deepCopyDate(date) {
 export default {
     setup() {
         const dataPickerObj = ref({
-            mouseTrigger: false,
+            show: false,
             x: 0,
             y: 0,
             date: null,
@@ -255,17 +263,7 @@ export default {
             },
         });
 
-        const ToggleDatePicker = (trigger) => {
-            dataPickerObj[trigger] = !dataPickerObj[trigger]
-        };
-
-        const popupTriggers = ref({
-            buttonTrigger: false,
-            timedTrigger: false
-        });
-
         const hintObj = ref({
-            mouseTrigger: false,
             show: false,
             x: 0,
             y: 0,
@@ -274,6 +272,7 @@ export default {
         })
 
         const popupContent = ref({
+            show: false,
             name: '',
             choices: [],
             format: '',
@@ -282,6 +281,9 @@ export default {
 
         const personObj = ref({
             buttonShown: false,
+            search: '',
+            users: Array,
+            selections: Array,
         });
 
         const dueObj = ref({
@@ -305,18 +307,11 @@ export default {
             timer: Date,
         });
 
-        const TogglePopup = (trigger) => {
-            popupTriggers.value[trigger] = !popupTriggers.value[trigger]
-        };
-
         const defaultStateFormat = 'height: 20px; width: 100px; color: white; '
 
         return {
             dataPickerObj,
-            ToggleDatePicker,
-            popupTriggers,
             hintObj,
-            TogglePopup,
             popupContent,
             personObj,
             dueObj,
@@ -328,7 +323,7 @@ export default {
         }
     },
 
-    components: {Subitem, Popup, Hint, DatePicker},
+    components: {Subitem, Popup, DatePicker},
 
     props: {
         item: Object,
@@ -351,6 +346,7 @@ export default {
                 console.log("value", obj.value)
                 item['Name'] = obj.value;
                 item['id'] = this.group.items.length;
+                item['Person'] = [];
                 item['Note'] = '';
                 item['Due Date'] = null;
                 item['Status'] = null;
@@ -419,7 +415,7 @@ export default {
                 default:
                     console.log('chooseStateMenu', 'unmatched', targetField);
             }
-            this.TogglePopup(trigger);
+            this.popupContent.show = false;
         },
 
         setWidth($format) {
@@ -487,10 +483,6 @@ export default {
                         // 'overflow-wrap': 'normal',
 
                     }
-                // case 'subitem':
-                //     return {
-                //         'width': toPercent($format['width']),
-                //     }
                 default: {
                     return {
                         'width': toPercent($format['width']),
@@ -512,7 +504,7 @@ export default {
                     return {
                         // 'margin-left': '10px',
                         // 'margin-right': '10px',
-                        'width' : '100%',
+                        'width': '100%',
                         'max-width': '400px',
                         'max-height': '100px',
                         'vertical-align': 'top',
@@ -671,30 +663,7 @@ export default {
             }
         },
 
-        setPopupContent(format, trigger) {
-            // console.log('setPopupContent', format, trigger);
-            switch (format.name) {
-                case 'Status': {
-                    this.popupContent.name = 'Status';
-                    let choices = this.group['statuses'];
-                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
-                    this.popupContent.choices = choices;
-                    break;
-                }
-                case 'Priority':
-                    this.popupContent.name = 'Priority'
-                    let choices = this.group['priorities'];
-                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
-                    this.popupContent.choices = choices;
-                    break;
-                default: {
-                    console.log('setPopupContent: unmatched choice')
-                }
-            }
-            this.TogglePopup(trigger);
-        },
-
-        stateAction(format, options) {
+        stateAction(format, options, event) {
             let trigger = options[1]
             let defaultState = Object()
             defaultState['format'] = this.defaultStateFormat + 'background-color: rgb(197, 197, 197)';
@@ -702,29 +671,36 @@ export default {
 
 
             switch (format.name) {
-                case 'Status': {
-                    console.log('stateAction123', format.name, options);
-                    this.popupContent.name = 'Status';
-                    let choices = JSON.parse(JSON.stringify(this.group['statuses']));
+                case 'Status':
+                case 'Priority':{
+                    console.log('stateAction123', format.name, options, event);
+                    this.popupContent.name = format.name
+                    let fieldName = format.name === 'Status' ? 'statuses' : 'priorities';
+                    let choices = JSON.parse(JSON.stringify(this.group[fieldName]));
                     choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     choices.push(defaultState);
                     this.popupContent.choices = choices;
-                    this.popupContent.targetField = 'Status';
+                    this.popupContent.targetField = format.name;
+                    this.popupContent.x = event.clientX;
+                    this.popupContent.y = event.clientY;
+                    this.popupContent.show = true;
+                    this.popupContent.format = {
+                        'top': (this.popupContent.y - 40) + 'px',
+                        'left': (this.popupContent.x + 40) + 'px',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        'width': 'max-content',
+                    }
                     break;
                 }
-                case 'Priority':
-                    this.popupContent.name = 'Priority'
-                    let choices = JSON.parse(JSON.stringify(this.group['priorities']));
-                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
-                    choices.push(defaultState);
-                    this.popupContent.choices = choices;
-                    this.popupContent.targetField = 'Priority';
-                    break;
                 default: {
                     console.log('stateAction: unmatched choice')
                 }
             }
-            this.TogglePopup(trigger);
         },
 
         itemAction(format, options, event) {
@@ -761,7 +737,7 @@ export default {
 
                 case 'Priority.click':
                 case 'Status.click': {
-                    this.stateAction(format, options)
+                    this.stateAction(format, options, event)
                     break;
                 }
 
@@ -812,7 +788,6 @@ export default {
                     // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.hintObj['mouseTrigger'] = true;
                     this.hintObj.show = true;
                     this.hintObj.content = this.dueObj.msg;
                     this.hintObj.format = {
@@ -824,12 +799,12 @@ export default {
                         'max-height': '50px',
                         'vertical-align': 'top',
                         'text-align': 'left',
+                        'background-color' : 'rgb(100, 100, 100)',
                     }
                     break;
                 }
                 case 'Due Date.mouseleave': {
                     // console.log('hint close')
-                    this.hintObj['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
                 }
@@ -844,16 +819,16 @@ export default {
             switch (options[0]) {
                 case 'confirm':
                     this.item['Due Date'] = this.dataPickerObj.date.getTime();
-                    this.dataPickerObj.mouseTrigger = false;
+                    this.dataPickerObj.show = false;
                     this.setLastUpdateTime();
                     break;
                 case 'cancel':
-                    this.dataPickerObj.mouseTrigger = false;
+                    this.dataPickerObj.show = false;
                     break;
                 case 'remove':
                     this.item['Due Date'] = null;
                     this.dueObj.initialised = false;
-                    this.dataPickerObj.mouseTrigger = false;
+                    this.dataPickerObj.show = false;
                     break;
                 case 'nextYear':
                     this.dataPickerObj.millis += 1000 * 60 * 60 * 24 * 365; // 1 year
@@ -881,7 +856,6 @@ export default {
             this.dataPickerObj.millis = parseInt(dateNumber);
             this.dataPickerObj.x = event.clientX;
             this.dataPickerObj.y = event.clientY;
-            this.dataPickerObj['mouseTrigger'] = true;
             this.dataPickerObj.show = true;
             this.dataPickerObj.format = {
                 'background-color': 'rgba(0, 0, 0, 0.1)',
@@ -903,7 +877,6 @@ export default {
                     // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.hintObj['mouseTrigger'] = true;
                     this.hintObj.show = true;
                     this.hintObj.content = obj.value;
                     this.hintObj.format = {
@@ -916,12 +889,12 @@ export default {
                         'flex-direction': 'column',
                         'white-space': 'pre-wrap',
                         'width': 'max-content',
+                        'background-color' : 'rgb(100, 100, 100)',
                     }
                     break;
                 }
                 case 'Note.mouseleave': {
                     // console.log('hint close')
-                    this.hintObj['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
                 }
@@ -1016,7 +989,7 @@ export default {
                         'white-space': 'normal',
                         'overflow-wrap': 'normal',
                     }));
-                    this.TogglePopup('buttonTrigger');//popup alert
+                    this.popupContent();//popup alert
                     exitCode = 1;
                 } else {
                     this.item['Time Tracking']['records'].push(createRecord(index));

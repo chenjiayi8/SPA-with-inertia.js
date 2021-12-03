@@ -18,7 +18,6 @@
                             :ref="'personsEdit'+this.subitem.id" class="circledButton"
                             style="position: absolute; left: 0; background-color: blue"
                             v-on:click="personAction('click', $event)"
-
                     >+
                     </button>
                     <div v-for="name in getNames()" class="circle" :style="name.format">
@@ -43,31 +42,42 @@
                         v-on:mouseover="itemAction(format, ['mouseover', ''], $event)"
                         v-on:mouseleave="itemAction(format, ['mouseleave', ''], $event)"
                         v-on:change="itemAction(format, ['change', ''], $event)"
-                        @click="itemAction(format,['click', 'buttonTrigger'])"
+                        @click="itemAction(format,['click', 'buttonTrigger'], $event)"
                         @focus="itemAction(format, ['focus','in'])"
                         @blur="itemAction(format, ['focus','out'])"
                         :style="formatContent(format)"
                         class="px-1"
                     />
 
-                    <!--   menu-->
+                    <!--popup choice-->
                     <Popup
-                        v-if="popupMenuTriggers.buttonTrigger"
-                        :TogglePopupMenu="() => TogglePopupMenu('buttonTrigger')">
-                        <h2>{{ popupMenuContent.name }}</h2>
-                        <div>
-                            <div v-for="(choice, index) in popupMenuContent.choices">
-                                <button :style="choice.format"
-                                        @click="chooseStateMenu(popupMenuContent.targetField, index, 'buttonTrigger')">
+                        v-if="popupMenuObj.show"
+                        :TogglePopup="() => popupMenuObj.show = !popupMenuObj.show"
+                        :style="popupMenuObj.format">
+                        <div class="flex items-center flex-col px-4 py-6 bg-gray-500 ">
+                            <div>
+                                <h2>{{ popupMenuObj.name }}</h2>
+                            </div>
+                            <div v-for="(choice, index) in popupMenuObj.choices">
+                                <button
+                                    :style="choice.format"
+                                    @click="chooseStateMenu(popupMenuObj.targetField, index, 'buttonTrigger')">
                                     {{ choice.name }}
+                                </button>
+                            </div>
+                            <div>
+                                <button class="popup-close" @click="popupMenuObj.show=false">
+                                    Cancel
                                 </button>
                             </div>
 
                         </div>
                     </Popup>
 
+
+
                     <!--   inputs -->
-                    <Hint
+                    <Popup
                         v-if="popupInputObj.show"
                         :ToggleHint="() => popupInputObj.show = !popupInputObj.show"
                         class="flex items-center"
@@ -104,19 +114,15 @@
                                 </button>
                             </div>
                         </div>
-                    </Hint>
+                    </Popup>
 
 
-                    <Hint
-                        v-if="hintTriggers.mouseTrigger"
-                        :ToggleHint="() => ToggleHint('mouseTrigger')"
+                    <Popup
+                        v-if="hintObj.show"
                         :style="hintObj.format">
-                        <div>
-                            <div>
-                                {{ hintObj.content }}
-                            </div>
-                        </div>
-                    </Hint>
+                        {{ hintObj.content }}
+                    </Popup>
+
                 </div>
             </div>
         </td>
@@ -155,8 +161,8 @@
  */
 
 import {ref} from "vue";
+// import Popup from "../Pages/Backup/Popup";
 import Popup from "./Popup";
-import Hint from "./Hint";
 
 function toPercent($number, $float = 0) {
     return parseFloat($number).toFixed($float) + "%";
@@ -202,21 +208,22 @@ function parseStringDateTime(str) {
 
 export default {
     setup() {
-        const popupMenuTriggers = ref({
-            buttonTrigger: false,
-            timedTrigger: false
+        const hintObj = ref({
+            show: false,
+            x: 0,
+            y: 0,
+            content: '',
+            format: '',
         });
 
-        const popupMenuContent = ref({
+        const popupMenuObj = ref({
+            show: false,
             name: '',
-            choices: Array,
+            choices: [],
             format: '',
             targetField: '',
         });
 
-        const TogglePopupMenu = (trigger) => {
-            popupMenuTriggers.value[trigger] = !popupMenuTriggers.value[trigger]
-        };
 
         const popupInputObj = ref({
             show: false,
@@ -236,14 +243,6 @@ export default {
             content: '',
         });
 
-        const hintTriggers = ref({
-            mouseTrigger: false,
-        });
-
-        const hintContent = ref('Hello world!');
-
-        const hintFormat = ref();
-
         const clickTimer = ref({
             result: [],
             delay: 3000,
@@ -253,40 +252,20 @@ export default {
 
         const textAreaZoomed = ref(false);
 
-        const hintObj = ref({
-            show: false,
-            x: 0,
-            y: 0,
-            content: '',
-            format: {},
-        })
-
-
-        const ToggleHint = (trigger) => {
-            hintTriggers.value[trigger] = !hintTriggers.value[trigger]
-        };
-
         const defaultStateFormat = 'height: 20px; width: 100px; color: white; '
 
         return {
-            Popup,
-            popupMenuTriggers,
-            popupMenuContent,
-            TogglePopupMenu,
+            hintObj,
+            popupMenuObj,
             popupInputObj,
             personObj,
             urlObj,
-            hintTriggers,
-            ToggleHint,
-            hintContent,
-            hintFormat,
             clickTimer,
             textAreaZoomed,
-            hintObj,
             defaultStateFormat,
         }
     },
-    components: {Popup, Hint},
+    components: {Popup},
 
 
     props: {
@@ -327,14 +306,12 @@ export default {
 
         chooseStateMenu(targetField, index, trigger) {
             let itemField = targetField === 'Status' ? 'statuses' : 'priorities';
-            let ref = targetField.toLowerCase() + this.subitem.id;
-            let obj = this.$refs[ref];
             if (index < this.group[itemField].length) {
                 this.subitem[targetField] = index;
             } else {
                 this.subitem[targetField] = null;
             }
-            this.TogglePopupMenu(trigger);
+            this.popupMenuObj.show = false;
             this.setLastUpdateTime()
         },
 
@@ -595,35 +572,42 @@ export default {
             }
         },
 
-        stateAction(format, options) {
-            let trigger = options[1]
+        stateAction(format, options, event) {
             let defaultState = Object()
             defaultState['format'] = this.defaultStateFormat + 'background-color: rgb(197, 197, 197)';
             defaultState['name'] = 'None'
+
             switch (format.name) {
-                case 'Status': {
-                    console.log('stateAction123', format.name, options);
-                    this.popupMenuContent.name = 'Status';
-                    let choices = JSON.parse(JSON.stringify(this.group['statuses']));
+                case 'Status':
+                case 'Priority':{
+                    console.log('stateAction123', format.name, options, event);
+                    this.popupMenuObj.name = format.name
+                    let fieldName = format.name === 'Status' ? 'statuses' : 'priorities';
+                    let choices = JSON.parse(JSON.stringify(this.group[fieldName]));
                     choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
                     choices.push(defaultState);
-                    this.popupMenuContent.choices = choices;
-                    this.popupMenuContent.targetField = 'Status';
+                    this.popupMenuObj.choices = choices;
+                    this.popupMenuObj.targetField = format.name;
+                    this.popupMenuObj.x = event.clientX;
+                    this.popupMenuObj.y = event.clientY;
+                    this.popupMenuObj.show = true;
+                    this.popupMenuObj.format = {
+                        'top': (this.popupMenuObj.y - 40) + 'px',
+                        'left': (this.popupMenuObj.x + 40) + 'px',
+                        'max-width': '400px',
+                        'max-height': '100px',
+                        'vertical-align': 'top',
+                        'justify-content': 'left',
+                        'flex-direction': 'column',
+                        'white-space': 'pre-wrap',
+                        'width': 'max-content',
+                    }
                     break;
                 }
-                case 'Priority':
-                    this.popupMenuContent.name = 'Priority'
-                    let choices = JSON.parse(JSON.stringify(this.group['priorities']));
-                    choices.forEach(e => e.format = this.defaultStateFormat + 'background-color:' + e.color);
-                    choices.push(defaultState);
-                    this.popupMenuContent.choices = choices;
-                    this.popupMenuContent.targetField = 'Priority';
-                    break;
                 default: {
                     console.log('stateAction: unmatched choice')
                 }
             }
-            this.TogglePopupMenu(trigger);
         },
 
         itemAction(format, options, event) {
@@ -649,7 +633,7 @@ export default {
                 }
 
                 case 'Status.click': {
-                    this.stateAction(format, options)
+                    this.stateAction(format, options, event)
                     break;
                 }
 
@@ -702,9 +686,8 @@ export default {
                     // console.log('hint show')
                     this.hintObj.x = event.clientX;
                     this.hintObj.y = event.clientY;
-                    this.hintTriggers['mouseTrigger'] = true;
                     this.hintObj.show = true;
-                    this.hintObj.content = obj.innerHTML;
+                    this.hintObj.content = obj.value;
                     this.hintObj.format = {
                         'top': (this.hintObj.y - 40) + 'px',
                         'left': (this.hintObj.x + 40) + 'px',
@@ -715,12 +698,12 @@ export default {
                         'flex-direction': 'column',
                         'white-space': 'pre-wrap',
                         'width': 'max-content',
+                        'background-color' : 'rgb(100, 100, 100)',
                     }
                     break;
                 }
                 case 'Note.mouseleave': {
                     // console.log('hint close')
-                    this.hintTriggers['mouseTrigger'] = false;
                     this.hintObj.show = false;
                     break;
                 }

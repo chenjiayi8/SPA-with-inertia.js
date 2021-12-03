@@ -1,17 +1,12 @@
 <template>
     <div class="popup">
-        <div class="popup-inner">
-            <slot />
-            <button class="popup-close" @click="TogglePopup()">
-                Cancel
-            </button>
-        </div>
+        <slot/>
     </div>
 </template>
 
 <script>
 export default {
-    props: ['TogglePopup']
+    props: ['TogglePopup', 'format']
 }
 </script>
 
@@ -23,15 +18,17 @@ export default {
     right: 0;
     bottom: 0;
     z-index: 99;
-    background-color: rgba(0, 0, 0, 0.2);
+    color: white;
+    padding: 10px;
+    //background-color: gray;
+    white-space: normal;
+    font-size: medium;
+    vertical-align: top;
+    text-align: left;
+    overflow-wrap: normal;
 
     display: flex;
     align-items: center;
     justify-content: center;
-
-    .popup-inner {
-        background: #FFF;
-        padding: 32px;
-    }
 }
 </style>

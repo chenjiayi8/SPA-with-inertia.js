@@ -26,7 +26,7 @@
 <script>
 import {DatePicker} from 'v-calendar';
 import {ref} from "vue";
-import Hint from "../../Shared/Hint";
+import Popup from "../../Shared/Popup";
 
 export default {
     name: "TestVCalendar",
@@ -55,7 +55,7 @@ export default {
         }
     },
 
-    components: {DatePicker, Hint},
+    components: {DatePicker, Popup},
 
 }
 </script>
